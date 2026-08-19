@@ -1,0 +1,19 @@
+---
+# Keyed on ansible_facts['distribution'], lowercased.
+# ---------------------------------------------
+dotfiles_prompt_icons:
+  amazon: ""
+  ubuntu: ""
+  debian: ""
+  fedora: ""
+  redhat: ""
+  centos: ""
+  rocky: ""
+  almalinux: ""
+  alpine: ""
+  archlinux: ""
+  _default: ""
+
+dotfiles_prompt_icon: >-
+  {{ dotfiles_prompt_icons[ansible_facts['distribution'] | lower]
+     | default(dotfiles_prompt_icons['_default'], true) }}

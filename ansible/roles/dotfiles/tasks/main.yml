@@ -1,0 +1,36 @@
+---
+- name: Read the passwd database
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Fail on a user that does not exist
+  ansible.builtin.fail:
+    msg: >-
+      No passwd entry for '{{ item }}'. dotfiles_users names the accounts to
+      install for; creating them is somebody else's job.
+  loop: "{{ dotfiles_users }}"
+  when: item not in ansible_facts['getent_passwd']
+
+- name: Locate the zsh binary
+  ansible.builtin.shell: command -v zsh
+  register: dotfiles_zsh_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Fail when zsh is not installed
+  ansible.builtin.fail:
+    msg: >-
+      zsh is not installed, so there is no shell to configure. Run the
+      packages role first -- with --tags dotfiles it gets skipped.
+  when: dotfiles_zsh_probe.rc != 0 and not ansible_check_mode
+
+- name: Note where zsh lives
+  ansible.builtin.set_fact:
+    dotfiles_zsh: "{{ (dotfiles_zsh_probe.stdout | trim) or '/usr/bin/zsh' }}"
+
+- name: Install the dotfiles for each user
+  ansible.builtin.include_tasks: user.yml
+  loop: "{{ dotfiles_users }}"
+  loop_control:
+    loop_var: dotfiles_user

@@ -1,0 +1,32 @@
+---
+# The users to install for. Take a list, so one run can serve several accounts:
+#   -e '{"dotfiles_users": ["root", "ec2-user"]}'
+dotfiles_users: ["{{ ansible_facts['user_id'] }}"]
+
+# Make zsh the login shell of every user above.
+dotfiles_login_shell: false
+
+# Directories under files/config, each installed into ~/.config as one unit.
+# ---------------------------------------------
+dotfiles_config_dirs:
+  - bat
+  - nvim
+  - shell
+  - tmux
+
+dotfiles_templates:
+  - { src: config/shell/zsh/p10k.zsh.j2, dest: .config/shell/zsh/.p10k.zsh }
+  - { src: config/tmux/tmux.conf.j2, dest: .config/tmux/tmux.conf }
+
+dotfiles_home_files:
+  - { src: home/zshenv, dest: .zshenv }
+
+dotfiles_state_dirs:
+  - .cache/less
+  - .cache/zsh
+  - .local/share/zsh
+  - .local/state
+
+# Where a directory about to be overwritten is snapshotted first, relative to
+# the user's home, one folder per playbook run.
+dotfiles_backup: ".local/state/dotfiles/backup/{{ ansible_facts['date_time']['iso8601_basic_short'] }}"

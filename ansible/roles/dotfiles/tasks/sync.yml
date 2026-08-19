@@ -1,0 +1,45 @@
+---
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: check whether the repo version differs"
+  ansible.builtin.copy:
+    src: "config/{{ dotfiles_dir }}"
+    dest: "{{ dotfiles_home }}/.config/"
+    owner: "{{ dotfiles_user }}"
+    group: "{{ dotfiles_gid }}"
+    mode: preserve
+  check_mode: true
+  register: dotfiles_drift
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: look for a current version to back up"
+  ansible.builtin.stat:
+    path: "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
+  register: dotfiles_current
+  when: dotfiles_drift is changed
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: snapshot the current version"
+  when: dotfiles_drift is changed and dotfiles_current.stat.exists
+  block:
+    - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: ensure this run's backup folder exists"
+      ansible.builtin.file:
+        path: "{{ dotfiles_home }}/{{ dotfiles_backup }}"
+        state: directory
+        owner: "{{ dotfiles_user }}"
+        group: "{{ dotfiles_gid }}"
+        mode: "0700"
+
+    - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: copy the current version into it"
+      ansible.builtin.command:
+        argv:
+          - cp
+          - -a
+          - "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
+          - "{{ dotfiles_home }}/{{ dotfiles_backup }}/{{ dotfiles_dir }}"
+        creates: "{{ dotfiles_home }}/{{ dotfiles_backup }}/{{ dotfiles_dir }}"
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: install the repo version"
+  ansible.builtin.copy:
+    src: "config/{{ dotfiles_dir }}"
+    dest: "{{ dotfiles_home }}/.config/"
+    owner: "{{ dotfiles_user }}"
+    group: "{{ dotfiles_gid }}"
+    mode: preserve
+  when: dotfiles_drift is changed

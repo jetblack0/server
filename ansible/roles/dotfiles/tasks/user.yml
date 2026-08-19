@@ -1,0 +1,65 @@
+---
+- name: "{{ dotfiles_user }}: install the dotfiles"
+  become: "{{ dotfiles_user != ansible_facts['user_id'] }}"
+  vars:
+    dotfiles_home: "{{ ansible_facts['getent_passwd'][dotfiles_user][4] }}"
+    dotfiles_gid: "{{ ansible_facts['getent_passwd'][dotfiles_user][2] }}"
+  block:
+    - name: "{{ dotfiles_user }}: create the directories the configs need"
+      ansible.builtin.file:
+        path: "{{ dotfiles_home }}/{{ item }}"
+        state: directory
+        owner: "{{ dotfiles_user }}"
+        group: "{{ dotfiles_gid }}"
+      loop: "{{ ['.config'] + dotfiles_state_dirs }}"
+
+    - name: "{{ dotfiles_user }}: install the managed config directories"
+      ansible.builtin.include_tasks: sync.yml
+      loop: "{{ dotfiles_config_dirs }}"
+      loop_control:
+        loop_var: dotfiles_dir
+
+    - name: "{{ dotfiles_user }}: render the templated configs"
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ dotfiles_home }}/{{ item.dest }}"
+        owner: "{{ dotfiles_user }}"
+        group: "{{ dotfiles_gid }}"
+        mode: "0644"
+      loop: "{{ dotfiles_templates }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "{{ dotfiles_user }}: install the files that belong in $HOME"
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ dotfiles_home }}/{{ item.dest }}"
+        owner: "{{ dotfiles_user }}"
+        group: "{{ dotfiles_gid }}"
+        mode: "0644"
+      loop: "{{ dotfiles_home_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "{{ dotfiles_user }}: leave the aliases behind in bash as well"
+      ansible.builtin.blockinfile:
+        path: "{{ dotfiles_home }}/.bashrc"
+        create: true
+        owner: "{{ dotfiles_user }}"
+        group: "{{ dotfiles_gid }}"
+        mode: "0644"
+        marker: "# {mark} ansible managed -- personal aliases"
+        block: |
+          alias ll="ls -lHg --color=auto"
+          alias lla="ll -a"
+          alias la="ls -a"
+          alias l="ls"
+          alias sl="ls"
+          alias ip="ip -c=always"
+
+- name: "{{ dotfiles_user }}: make zsh the login shell"
+  become: true
+  ansible.builtin.user:
+    name: "{{ dotfiles_user }}"
+    shell: "{{ dotfiles_zsh }}"
+  when: dotfiles_login_shell
