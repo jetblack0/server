@@ -1,0 +1,15 @@
+# push    ansible-playbook -i inventory personal-tools.yml -l my-box
+# local   ansible-playbook -i localhost, -c local personal-tools.yml
+# pull    ansible-pull -U <repo> -i localhost, ansible/personal-tools.yml
+
+---
+- name: Install personal CLI tooling and shell setup
+  hosts: all
+
+  become: false
+  gather_facts: true
+
+  roles:
+    - { role: packages, tags: packages }
+    - { role: binaries, tags: binaries }
+    - { role: dotfiles, tags: dotfiles }
