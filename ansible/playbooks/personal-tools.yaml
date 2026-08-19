@@ -1,0 +1,222 @@
+---
+
+- name: Personalized CLI tooling and shell setup
+  hosts: "{{ personal_tools_hosts | default('localhost') }}"
+  connection: "{{ personal_tools_connection | default('local') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    personal_dnf_packages:
+      - tmux
+      - zsh
+      - git
+      - jq
+      - htop
+      - tree
+      - vim-enhanced
+      - tar
+      - gzip
+
+    # ansible-pull … -e @/etc/ansible/pull-vars.yml
+    personal_tools_extra_packages: []
+
+    fzf_version: "0.74.0"
+    fzf_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts['architecture']] | default(ansible_facts['architecture']) }}"
+    zoxide_version: "0.10.0"
+    ripgrep_version: "15.2.0"
+    bat_version: "0.26.1"
+    fd_version: "10.4.2"
+    eza_version: "0.23.5"
+    btop_version: "1.4.7"
+    neovim_version: "0.12.4"
+    neovim_arch: "{{ {'x86_64': 'x86_64', 'aarch64': 'arm64'}[ansible_facts['architecture']] | default(ansible_facts['architecture']) }}"
+    neovim_release: "nvim-linux-{{ neovim_arch }}"
+    neovim_install_dir: "/opt/neovim/{{ neovim_version }}"
+
+    rust_arch: "{{ ansible_facts['architecture'] }}"
+
+    # Amazon Linux packages none of these.
+    personal_tools_releases:
+      - name: zoxide
+        version: "{{ zoxide_version }}"
+        url: "https://github.com/ajeetdsouza/zoxide/releases/download/v{{ zoxide_version }}/zoxide-{{ zoxide_version }}-{{ rust_arch }}-unknown-linux-musl.tar.gz"
+        extra_opts: ["zoxide"]
+      - name: rg
+        version: "{{ ripgrep_version }}"
+        url: "https://github.com/BurntSushi/ripgrep/releases/download/{{ ripgrep_version }}/ripgrep-{{ ripgrep_version }}-{{ rust_arch }}-unknown-linux-musl.tar.gz"
+        extra_opts: ["--strip-components=1", "ripgrep-{{ ripgrep_version }}-{{ rust_arch }}-unknown-linux-musl/rg"]
+      - name: bat
+        version: "{{ bat_version }}"
+        url: "https://github.com/sharkdp/bat/releases/download/v{{ bat_version }}/bat-v{{ bat_version }}-{{ rust_arch }}-unknown-linux-musl.tar.gz"
+        extra_opts: ["--strip-components=1", "bat-v{{ bat_version }}-{{ rust_arch }}-unknown-linux-musl/bat"]
+      - name: fd
+        version: "{{ fd_version }}"
+        url: "https://github.com/sharkdp/fd/releases/download/v{{ fd_version }}/fd-v{{ fd_version }}-{{ rust_arch }}-unknown-linux-musl.tar.gz"
+        extra_opts: ["--strip-components=1", "fd-v{{ fd_version }}-{{ rust_arch }}-unknown-linux-musl/fd"]
+      - name: eza
+        version: "{{ eza_version }}"
+        url: "https://github.com/eza-community/eza/releases/download/v{{ eza_version }}/eza_{{ rust_arch }}-unknown-linux-gnu.tar.gz"
+        extra_opts: ["./eza"]
+      - name: btop
+        version: "{{ btop_version }}"
+        url: "https://github.com/aristocratos/btop/releases/download/v{{ btop_version }}/btop-{{ rust_arch }}-unknown-linux-musl.tar.gz"
+        extra_opts: ["--strip-components=3", "./btop/bin/btop"]
+
+  tasks:
+    - name: Fail on unsupported distributions
+      ansible.builtin.fail:
+        msg: >-
+          This playbook targets Amazon Linux (dnf). Found
+          {{ ansible_facts['distribution'] }} ({{ ansible_facts['os_family'] }}).
+      when: ansible_facts['distribution'] != 'Amazon'
+
+    - name: Install the tools available from dnf
+      ansible.builtin.dnf:
+        name: "{{ personal_dnf_packages + personal_tools_extra_packages }}"
+        state: present
+
+    - name: Probe the installed fzf version
+      ansible.builtin.command: /usr/local/bin/fzf --version
+      register: fzf_probe
+      changed_when: false
+      failed_when: false
+
+    - name: Install fzf {{ fzf_version }}
+      when: fzf_probe.rc != 0 or not fzf_probe.stdout.startswith(fzf_version)
+      block:
+        - name: Download and extract the fzf binary
+          ansible.builtin.unarchive:
+            src: "https://github.com/junegunn/fzf/releases/download/v{{ fzf_version }}/fzf-{{ fzf_version }}-linux_{{ fzf_arch }}.tar.gz"
+            remote_src: true
+            dest: /usr/local/bin
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Ensure the fzf examples directory exists
+          ansible.builtin.file:
+            path: /usr/share/doc/fzf/examples
+            state: directory
+            mode: "0755"
+
+        - name: Install the fzf zsh integration files
+          ansible.builtin.get_url:
+            url: "https://raw.githubusercontent.com/junegunn/fzf/v{{ fzf_version }}/shell/{{ item }}"
+            dest: "/usr/share/doc/fzf/examples/{{ item }}"
+            mode: "0644"
+            force: true
+          loop:
+            - key-bindings.zsh
+            - completion.zsh
+
+    # --- the rest of the upstream binaries -----------------------------------
+    - name: Probe the installed upstream tool versions
+      ansible.builtin.command: "/usr/local/bin/{{ item.name }} --version"
+      register: personal_tools_probe
+      changed_when: false
+      failed_when: false
+      loop: "{{ personal_tools_releases }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Install the upstream release binaries
+      ansible.builtin.unarchive:
+        src: "{{ item.item.url }}"
+        remote_src: true
+        dest: /usr/local/bin
+        owner: root
+        group: root
+        mode: "0755"
+        extra_opts: "{{ item.item.extra_opts }}"
+      when: item.rc != 0 or item.item.version not in item.stdout
+      loop: "{{ personal_tools_probe.results }}"
+      loop_control:
+        label: "{{ item.item.name }} {{ item.item.version }}"
+
+    - name: Create the Neovim installation directory
+      ansible.builtin.file:
+        path: "{{ neovim_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install Neovim {{ neovim_version }}
+      ansible.builtin.unarchive:
+        src: "https://github.com/neovim/neovim/releases/download/v{{ neovim_version }}/{{ neovim_release }}.tar.gz"
+        remote_src: true
+        dest: "{{ neovim_install_dir }}"
+        owner: root
+        group: root
+        creates: "{{ neovim_install_dir }}/bin/nvim"
+        extra_opts: [--strip-components=1]
+
+    - name: Link Neovim into PATH
+      ansible.builtin.file:
+        src: "{{ neovim_install_dir }}/bin/nvim"
+        dest: /usr/local/bin/nvim
+        state: link
+        force: true
+
+    - name: Deploy the Neovim configuration tree
+      ansible.builtin.copy:
+        src: ../files/tools/nvim/
+        dest: /root/.config/nvim/
+        mode: "0644"
+        directory_mode: "0755"
+
+    # --- tmux configuration for root -----------------------------------------
+    - name: Create the root tmux config directory
+      ansible.builtin.file:
+        path: /root/.config/tmux
+        state: directory
+        mode: "0755"
+
+    - name: Deploy the tmux configuration tree
+      ansible.builtin.copy:
+        src: ../files/tools/tmux/
+        dest: /root/.config/tmux/
+        mode: "0644"
+        directory_mode: "0755"
+
+    # --- zsh configuration for root (default shell stays bash) ---------------
+    - name: Create the directories the zsh config expects
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /root/.config/zsh/plugins
+        - /root/.local/share/zsh
+        - /root/.cache/zsh
+        - /root/.cache/less
+
+    - name: Deploy the zsh configuration
+      ansible.builtin.copy:
+        src: "../files/tools/zsh/{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "0644"
+      loop:
+        - { src: zshenv, dest: /root/.zshenv }
+        - { src: zshrc, dest: /root/.config/zsh/.zshrc }
+        - { src: p10k.zsh, dest: /root/.config/zsh/.p10k.zsh }
+        - { src: plugins/simple-completion.zsh, dest: /root/.config/zsh/plugins/simple-completion.zsh }
+
+    # --- root shell aliases --------------------------------------------------
+    - name: Install the personal bash aliases for root
+      ansible.builtin.blockinfile:
+        path: /root/.bashrc
+        create: true
+        mode: "0644"
+        marker: "# {mark} ANSIBLE MANAGED - personal aliases"
+        block: |
+          alias ll="ls -lHg --color=auto"
+          alias sl="ls"
+          alias lla="ll -a"
+          alias la="ls -a"
+          alias ip="ip -c=always"
+
+    # --- summary -------------------------------------------------------------
+    - name: Verify the expected commands are on PATH
+      ansible.builtin.shell: "command -v {{ item }}"
+      changed_when: false
+      loop: [tmux, zsh, git, jq, htop, tree, vim, nvim, fzf, zoxide, rg, bat, fd, eza, btop]
