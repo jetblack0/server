@@ -1,0 +1,14 @@
+---
+# Collapse the fine-grained pkg_mgr fact onto one key per family.
+packages_manager: >-
+  {{ {'dnf': 'dnf', 'dnf5': 'dnf', 'yum': 'dnf', 'apt': 'apt'}[ansible_facts['pkg_mgr']] | default('') }}
+
+packages_enabled: "{{ packages | rejectattr('name', 'in', packages_exclude) | list }}"
+
+packages_selected: >-
+  {{ (packages_enabled | selectattr(packages_manager, 'defined')
+                       | rejectattr(packages_manager, 'sameas', false)
+                       | map(attribute=packages_manager) | list)
+   + (packages_enabled | rejectattr(packages_manager, 'defined')
+                       | map(attribute='name') | list)
+   + packages_extra }}

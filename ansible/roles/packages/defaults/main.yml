@@ -1,0 +1,46 @@
+---
+# One entry per package. `name` is the package name under every manager
+# unless a manager key says otherwise:
+#   dnf: <name> | false
+#   apt: <name> | false
+#
+# The manager key comes from ansible_facts['pkg_mgr']; vars/main.yml derives
+# the install list from it, so supporting a new distro family is a matter of
+# adding its key here and a task file under tasks/.
+# ---------------------------------------------
+packages:
+  # shell & terminal
+  - { name: zsh }
+  - { name: tmux }
+  - { name: ncurses-term } # terminfo for kitty, ghostty, alacritty, etc.
+  - { name: less }
+
+  # files & archives
+  - { name: findutils }
+  - { name: tar }
+  - { name: gzip }
+  - { name: unzip }
+  - { name: rsync }
+
+  # system & network
+  - { name: htop }
+  - { name: procps-ng, apt: procps }
+  - { name: iproute, apt: iproute2 }
+
+  # git, json & docs
+  - { name: git }
+  - { name: jq }
+  - { name: man-db }
+  - { name: man-pages, apt: manpages }
+
+  - { name: ca-certificates }
+  - { name: openssh-clients, apt: openssh-client }
+
+# Entries to skip by canonical name, e.g. on a distro that lacks them.
+# ---------------------------------------------
+packages_exclude: []
+
+# Extra packages for this machine alone:
+#   ansible-pull ... -e @/etc/ansible/pull-vars.yml
+# ---------------------------------------------
+packages_extra: []

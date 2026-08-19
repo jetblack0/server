@@ -1,0 +1,10 @@
+---
+- name: Fail on an unsupported package manager
+  ansible.builtin.fail:
+    msg: >-
+      Unsupported package manager '{{ ansible_facts['pkg_mgr'] }}' on
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}.
+  when: packages_manager | length == 0
+
+- name: Install the base packages
+  ansible.builtin.include_tasks: "{{ packages_manager }}.yml"

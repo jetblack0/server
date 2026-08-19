@@ -1,0 +1,6 @@
+---
+- name: Install the base packages with dnf
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ packages_selected }}"
+    state: present
