@@ -1,0 +1,11 @@
+# Command-line options bat should use by default; `bat --help` lists them all.
+
+# gruvbox-dark is one of bat's built-in themes, so nothing has to be compiled
+# into a cache for it: `bat --list-themes` shows what else is on offer.
+--theme="gruvbox-dark"
+
+# Italics are off because tmux does not pass them through by default.
+#--italic-text=always
+
+# Map a filename pattern to a language, e.g.
+#--map-syntax ".ignore:Git Ignore"
