@@ -1,0 +1,9 @@
+---
+- name: "{{ tool.name }} {{ tool.version }}: download the binary"
+  ansible.builtin.get_url:
+    url: "{{ tool_url }}"
+    dest: "{{ binaries_prefix }}/bin/{{ tool.command | default(tool.name) }}"
+    force: true
+    owner: root
+    group: root
+    mode: "0755"

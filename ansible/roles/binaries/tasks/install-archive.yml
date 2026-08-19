@@ -1,0 +1,45 @@
+---
+- name: "{{ tool.name }}: make a scratch directory to unpack into"
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: "{{ tool.name }}-"
+  register: binaries_scratch
+
+- name: "{{ tool.name }} {{ tool.version }}: download and unpack the release"
+  ansible.builtin.unarchive:
+    src: "{{ tool_url }}"
+    remote_src: true
+    dest: "{{ binaries_scratch.path }}"
+
+- name: "{{ tool.name }}: find the binaries in the unpacked tree"
+  ansible.builtin.find:
+    paths: "{{ binaries_scratch.path }}"
+    patterns: "{{ tool_bins }}"
+    file_type: file
+    recurse: true
+  register: binaries_unpacked
+
+- name: "{{ tool.name }}: check the release held the binaries it should"
+  ansible.builtin.assert:
+    that: binaries_unpacked.files | map(attribute='path') | map('basename') | unique | sort == tool_bins | sort
+    fail_msg: >-
+      Expected {{ tool_bins | join(', ') }} in {{ tool_url | basename }}, found
+      {{ binaries_unpacked.files | map(attribute='path') | map('basename') | sort | join(', ') | default('nothing', true) }}.
+      Upstream probably rearranged the asset.
+
+- name: "{{ tool.name }}: install into {{ binaries_prefix }}/bin"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ binaries_prefix }}/bin/{{ item | basename }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ binaries_unpacked.files | map(attribute='path') | list }}"
+  loop_control:
+    label: "{{ item | basename }}"
+
+- name: "{{ tool.name }}: clear the scratch directory"
+  ansible.builtin.file:
+    path: "{{ binaries_scratch.path }}"
+    state: absent

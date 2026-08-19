@@ -1,0 +1,84 @@
+---
+binaries_prefix: /usr/local # single binaries go in bin/ under here
+binaries_opt: /opt/tools    # tools that need their own tree live here
+
+# One entry per tool, all of them fetched from the project's own GitHub
+# release. These are install on every distro:
+#
+#   name       the tool, and the directory name under binaries_opt
+#   command    what it is called on PATH
+#   version    pinned; also how the role decides an install is needed --
+#              `<command> --version` has to mention it
+#   bins       every binary to install, when there is more than just command
+#   url        rendered url to the release
+#   kind       archive  unpack, then pick the binaries out of the tree
+#              raw      the asset is the binary
+#              tree     unpack into binaries_opt and symlink the binaries,
+#                       for tools that need the files shipped next to them
+# ---------------------------------------------
+binaries:
+  # shell, search & files
+  - name: fzf
+    version: "0.74.3"
+    url: "https://github.com/junegunn/fzf/releases/download/v{version}/fzf-{version}-linux_{{ binaries_arch.goarch }}.tar.gz"
+
+  - name: zoxide
+    version: "0.10.0"
+    url: "https://github.com/ajeetdsouza/zoxide/releases/download/v{version}/zoxide-{version}-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
+  - name: ripgrep
+    command: rg
+    version: "15.2.0"
+    url: "https://github.com/BurntSushi/ripgrep/releases/download/{version}/ripgrep-{version}-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
+  - name: fd
+    version: "10.4.2"
+    url: "https://github.com/sharkdp/fd/releases/download/v{version}/fd-v{version}-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
+  - name: bat
+    version: "0.26.1"
+    url: "https://github.com/sharkdp/bat/releases/download/v{version}/bat-v{version}-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
+  # No musl build for aarch64, so this one is linked against glibc.
+  - name: eza
+    version: "0.23.5"
+    url: "https://github.com/eza-community/eza/releases/download/v{version}/eza_{{ binaries_arch.uname }}-unknown-linux-gnu.tar.gz"
+
+  - name: yazi
+    version: "26.8.15"
+    bins: [yazi, ya]
+    url: "https://github.com/sxyazi/yazi/releases/download/v{version}/yazi-{{ binaries_arch.uname }}-unknown-linux-musl.zip"
+
+  - name: dua-cli
+    command: dua
+    version: "2.42.1"
+    url: "https://github.com/Byron/dua-cli/releases/download/v{version}/dua-v{version}-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
+  # git & code
+  - name: git-delta
+    command: delta
+    version: "0.19.2"
+    url: "https://github.com/dandavison/delta/releases/download/{version}/delta-{version}-{{ binaries_arch.uname }}-unknown-linux-gnu.tar.gz"
+
+  - name: lazygit
+    version: "0.64.1"
+    url: "https://github.com/jesseduffield/lazygit/releases/download/v{version}/lazygit_{version}_linux_{{ binaries_arch.linux }}.tar.gz"
+
+  # docs
+  - name: tealdeer
+    command: tldr
+    version: "1.8.1"
+    kind: raw
+    url: "https://github.com/tealdeer-rs/tealdeer/releases/download/v{version}/tealdeer-linux-{{ binaries_arch.uname }}-musl"
+
+  # the one tool that needs its own tree: nvim finds share/nvim/runtime by
+  # walking up from the binary it resolved to.
+  - name: neovim
+    command: nvim
+    version: "0.12.4"
+    kind: tree
+    url: "https://github.com/neovim/neovim/releases/download/v{version}/nvim-linux-{{ binaries_arch.linux }}.tar.gz"
+
+# Entries to skip by name, e.g. on a box that has no business running yazi.
+# ---------------------------------------------
+binaries_exclude: []

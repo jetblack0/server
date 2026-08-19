@@ -1,0 +1,32 @@
+---
+- name: Fail on an unsupported CPU architecture
+  ansible.builtin.fail:
+    msg: >-
+      No release assets are mapped for '{{ ansible_facts['architecture'] }}'.
+      Add its spellings to binaries_arch_spellings in vars/main.yml.
+  when: ansible_facts['architecture'] not in binaries_arch_spellings
+
+- name: Probe the installed versions
+  ansible.builtin.command: "{{ binaries_prefix }}/bin/{{ item.command | default(item.name) }} --version"
+  loop: "{{ binaries_enabled }}"
+  loop_control:
+    label: "{{ item.command | default(item.name) }}"
+  register: binaries_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install the tools that are missing or out of date
+  ansible.builtin.include_tasks:
+    file: "install-{{ probe.item.kind | default('archive') }}.yml"
+    apply:
+      become: true
+  vars:
+    tool: "{{ probe.item }}"
+    tool_url: "{{ probe.item.url | replace('{version}', probe.item.version) }}"
+    tool_bins: "{{ probe.item.bins | default([probe.item.command | default(probe.item.name)]) }}"
+  loop: "{{ binaries_probe.results }}"
+  loop_control:
+    loop_var: probe
+    label: "{{ probe.item.name }} {{ probe.item.version }}"
+  when: probe.item.version not in (probe.stdout | default(''))

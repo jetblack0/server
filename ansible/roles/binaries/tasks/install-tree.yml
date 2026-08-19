@@ -1,0 +1,40 @@
+---
+# Tools that read files shipped beside them.
+- name: "{{ tool.name }}: create the version directory"
+  ansible.builtin.file:
+    path: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "{{ tool.name }} {{ tool.version }}: download and unpack the release"
+  ansible.builtin.unarchive:
+    src: "{{ tool_url }}"
+    remote_src: true
+    dest: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}"
+    extra_opts: [--strip-components=1]
+    owner: root
+    group: root
+
+- name: "{{ tool.name }}: link the binaries into {{ binaries_prefix }}/bin"
+  ansible.builtin.file:
+    src: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}/bin/{{ item }}"
+    dest: "{{ binaries_prefix }}/bin/{{ item }}"
+    state: link
+    force: true
+  loop: "{{ tool_bins }}"
+
+- name: "{{ tool.name }}: look for versions this role installed earlier"
+  ansible.builtin.find:
+    paths: "{{ binaries_opt }}/{{ tool.name }}"
+    file_type: directory
+    excludes: "{{ tool.version }}"
+    recurse: false
+  register: binaries_stale
+
+- name: "{{ tool.name }}: remove them, now that the symlink points elsewhere"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ binaries_stale.files | map(attribute='path') | list }}"

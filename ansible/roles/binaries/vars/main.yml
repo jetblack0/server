@@ -1,0 +1,8 @@
+---
+binaries_arch_spellings:
+  x86_64: { uname: x86_64, goarch: amd64, linux: x86_64 }
+  aarch64: { uname: aarch64, goarch: arm64, linux: arm64 }
+
+binaries_arch: "{{ binaries_arch_spellings[ansible_facts['architecture']] | default({}) }}"
+
+binaries_enabled: "{{ binaries | rejectattr('name', 'in', binaries_exclude) | list }}"
