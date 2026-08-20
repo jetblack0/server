@@ -49,6 +49,10 @@ binaries:
     bins: [yazi, ya]
     url: "https://github.com/sxyazi/yazi/releases/download/v{version}/yazi-{{ binaries_arch.uname }}-unknown-linux-musl.zip"
 
+  - name: ouch
+    version: "0.8.1"
+    url: "https://github.com/ouch-org/ouch/releases/download/{version}/ouch-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
   - name: dua-cli
     command: dua
     version: "2.42.1"
