@@ -18,6 +18,16 @@
       loop: "{{ dotfiles_config_dirs }}"
       loop_control:
         loop_var: dotfiles_dir
+      vars:
+        dotfiles_repo_dir: "{{ role_path }}/files/config/{{ dotfiles_dir }}"
+        dotfiles_dest_dir: "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
+
+    - name: "{{ dotfiles_user }}: drop this run's backup folder if it stayed empty"
+      ansible.builtin.command:
+        argv: [rmdir, "{{ dotfiles_home }}/{{ dotfiles_backup }}"]
+        removes: "{{ dotfiles_home }}/{{ dotfiles_backup }}"
+      failed_when: false
+      changed_when: false
 
     - name: "{{ dotfiles_user }}: render the templated configs"
       ansible.builtin.template:

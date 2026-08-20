@@ -1,22 +1,27 @@
 ---
-- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: check whether the repo version differs"
-  ansible.builtin.copy:
-    src: "config/{{ dotfiles_dir }}"
-    dest: "{{ dotfiles_home }}/.config/"
-    owner: "{{ dotfiles_user }}"
-    group: "{{ dotfiles_gid }}"
-    mode: preserve
-  check_mode: true
-  register: dotfiles_drift
+# Take a snapshot of the existing config directory, then copy the files managed
+# by the repo into it one-by-one. If nothing actually changed, delete the
+# snapshot.
 
-- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: look for a current version to back up"
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: list what the repo ships"
+  ansible.builtin.find:
+    paths: "{{ dotfiles_repo_dir }}"
+    file_type: any
+    recurse: true
+    hidden: true
+  # Find the files on the machine where Ansible itself is running.
+  delegate_to: localhost
+  become: false
+  changed_when: false
+  register: dotfiles_shipped
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: look for a version to snapshot"
   ansible.builtin.stat:
-    path: "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
+    path: "{{ dotfiles_dest_dir }}"
   register: dotfiles_current
-  when: dotfiles_drift is changed
 
 - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: snapshot the current version"
-  when: dotfiles_drift is changed and dotfiles_current.stat.exists
+  when: dotfiles_current.stat.exists
   block:
     - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: ensure this run's backup folder exists"
       ansible.builtin.file:
@@ -25,21 +30,46 @@
         owner: "{{ dotfiles_user }}"
         group: "{{ dotfiles_gid }}"
         mode: "0700"
+      changed_when: false
 
-    - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: copy the current version into it"
+    - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: copy it in there"
       ansible.builtin.command:
         argv:
           - cp
           - -a
-          - "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
+          - "{{ dotfiles_dest_dir }}"
           - "{{ dotfiles_home }}/{{ dotfiles_backup }}/{{ dotfiles_dir }}"
         creates: "{{ dotfiles_home }}/{{ dotfiles_backup }}/{{ dotfiles_dir }}"
+      changed_when: false
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: create the directories it needs"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ dotfiles_user }}"
+    group: "{{ dotfiles_gid }}"
+  loop: >-
+    {{ [dotfiles_dest_dir] + (dotfiles_shipped.files | selectattr('isdir')
+       | map(attribute='path') | map('relpath', dotfiles_repo_dir)
+       | map('regex_replace', '^', dotfiles_dest_dir ~ '/') | list | sort) }}
+  loop_control:
+    label: "{{ item | relpath(dotfiles_home) }}"
 
 - name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: install the repo version"
   ansible.builtin.copy:
-    src: "config/{{ dotfiles_dir }}"
-    dest: "{{ dotfiles_home }}/.config/"
+    src: "{{ item }}"
+    dest: "{{ dotfiles_dest_dir }}/{{ item | relpath(dotfiles_repo_dir) }}"
     owner: "{{ dotfiles_user }}"
     group: "{{ dotfiles_gid }}"
     mode: preserve
-  when: dotfiles_drift is changed
+  loop: "{{ dotfiles_shipped.files | rejectattr('isdir') | map(attribute='path') | sort }}"
+  loop_control:
+    label: "{{ item | relpath(dotfiles_repo_dir) }}"
+  register: dotfiles_installed
+
+- name: "{{ dotfiles_user }}/{{ dotfiles_dir }}: discard the snapshot, nothing moved"
+  ansible.builtin.file:
+    path: "{{ dotfiles_home }}/{{ dotfiles_backup }}/{{ dotfiles_dir }}"
+    state: absent
+  when: dotfiles_current.stat.exists and dotfiles_installed is not changed
+  changed_when: false
