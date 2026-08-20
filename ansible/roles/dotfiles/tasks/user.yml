@@ -41,7 +41,7 @@
       loop_control:
         label: "{{ item.dest }}"
 
-    - name: "{{ dotfiles_user }}: leave the aliases behind in bash as well"
+    - name: "{{ dotfiles_user }}: leave the aliases in bash too"
       ansible.builtin.blockinfile:
         path: "{{ dotfiles_home }}/.bashrc"
         create: true
