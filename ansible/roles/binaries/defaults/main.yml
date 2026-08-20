@@ -68,6 +68,12 @@ binaries:
     version: "0.64.1"
     url: "https://github.com/jesseduffield/lazygit/releases/download/v{version}/lazygit_{version}_linux_{{ binaries_arch.linux }}.tar.gz"
 
+  # python.
+  - name: uv
+    version: "0.12.5"
+    bins: [uv, uvx]
+    url: "https://github.com/astral-sh/uv/releases/download/{version}/uv-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
+
   # docs
   - name: tealdeer
     command: tldr
