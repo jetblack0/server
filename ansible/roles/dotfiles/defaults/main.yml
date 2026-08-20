@@ -13,10 +13,12 @@ dotfiles_config_dirs:
   - nvim
   - shell
   - tmux
+  - yazi
 
 dotfiles_templates:
   - { src: config/shell/zsh/p10k.zsh.j2, dest: .config/shell/zsh/.p10k.zsh }
   - { src: config/tmux/tmux.conf.j2, dest: .config/tmux/tmux.conf }
+  - { src: config/yazi/init.lua.j2, dest: .config/yazi/init.lua }
 
 dotfiles_home_files:
   - { src: home/zshenv, dest: .zshenv }

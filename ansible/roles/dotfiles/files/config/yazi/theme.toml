@@ -1,0 +1,216 @@
+# File list
+# ---------------------------------------------
+[mgr]
+cwd = { fg = "magenta", bold = true }
+
+
+# Mode indicator
+# ---------------------------------------------
+[mode]
+normal_main = { fg = "#191724", bg = "darkgray", bold = true }
+normal_alt  = { fg = "#6F6A87", bg = "#2A273F" }
+select_main = { fg = "#191724", bg = "#b4637a", bold = true }
+select_alt  = { fg = "#6F6A87", bg = "#2A273F" }
+unset_main  = { fg = "#e0def4", bg = "#31748f", bold = true }
+unset_alt   = { fg = "#6F6A87", bg = "#2A273F" }
+# ---------------------------------------------
+
+
+# Status bar
+# ---------------------------------------------
+[status]
+# Permissions, as shown on the right-hand side.
+perm_type  = { fg = "#fcf0f6" }
+perm_read  = { fg = "#fcf0f6" }
+perm_write = { fg = "#fcf0f6" }
+perm_exec  = { fg = "#fcf0f6" }
+perm_sep   = { fg = "#d683af" }
+
+# Progress bar for running file operations.
+progress_label  = { fg = "#e0def4", bold = true }
+progress_normal = { fg = "#191724", bg = "#2A273F" }
+progress_error  = { fg = "#B4637A", bg = "#2A273F" }
+# ---------------------------------------------
+
+
+# File colours
+# ---------------------------------------------
+# First match wins, so the specific globs go above the wildcards.
+[filetype]
+rules = [
+	# Directories, links and special files
+	{ url  = "*/", fg = "blue", bold = true },
+	{ mime = "*", is = "orphan", fg = "red", bg = "black", bold = true },
+	{ mime = "*", is = "block", fg = "yellow", bg = "black", bold = true },
+	{ mime = "*", is = "char", fg = "yellow", bg = "black", bold = true },
+	{ mime = "*", is = "exec", fg = "green", bold = true },
+	{ mime = "*", is = "fifo", fg = "yellow", bg = "black" },
+	{ mime = "*", is = "link", fg = "cyan", bold = true },
+	{ mime = "*", is = "sock", fg = "magenta", bold = true },
+	{ mime = "*", is = "sticky", fg = "white", bg = "red" },
+
+	# Archives
+	{ mime = "application/zip", fg = "lightred", bold = true },
+	{ mime = "application/gzip", fg = "lightred", bold = true },
+	{ mime = "application/x-tar", fg = "lightred", bold = true },
+	{ mime = "application/x-bzip", fg = "lightred", bold = true },
+	{ mime = "application/x-bzip2", fg = "lightred", bold = true },
+	{ mime = "application/x-7z-compressed", fg = "lightred", bold = true },
+	{ mime = "application/x-rar", fg = "lightred", bold = true },
+	{ url  = "*.7z", fg = "lightred", bold = true },
+	{ url  = "*.ace", fg = "lightred", bold = true },
+	{ url  = "*.alz", fg = "lightred", bold = true },
+	{ url  = "*.apk", fg = "lightred", bold = true },
+	{ url  = "*.arc", fg = "lightred", bold = true },
+	{ url  = "*.arj", fg = "lightred", bold = true },
+	{ url  = "*.bz", fg = "lightred", bold = true },
+	{ url  = "*.bz2", fg = "lightred", bold = true },
+	{ url  = "*.cab", fg = "lightred", bold = true },
+	{ url  = "*.cpio", fg = "lightred", bold = true },
+	{ url  = "*.crate", fg = "lightred", bold = true },
+	{ url  = "*.deb", fg = "lightred", bold = true },
+	{ url  = "*.drpm", fg = "lightred", bold = true },
+	{ url  = "*.dwm", fg = "lightred", bold = true },
+	{ url  = "*.dz", fg = "lightred", bold = true },
+	{ url  = "*.ear", fg = "lightred", bold = true },
+	{ url  = "*.egg", fg = "lightred", bold = true },
+	{ url  = "*.esd", fg = "lightred", bold = true },
+	{ url  = "*.gz", fg = "lightred", bold = true },
+	{ url  = "*.jar", fg = "lightred", bold = true },
+	{ url  = "*.lha", fg = "lightred", bold = true },
+	{ url  = "*.lrz", fg = "lightred", bold = true },
+	{ url  = "*.lz", fg = "lightred", bold = true },
+	{ url  = "*.lz4", fg = "lightred", bold = true },
+	{ url  = "*.lzh", fg = "lightred", bold = true },
+	{ url  = "*.lzma", fg = "lightred", bold = true },
+	{ url  = "*.lzo", fg = "lightred", bold = true },
+	{ url  = "*.pyz", fg = "lightred", bold = true },
+	{ url  = "*.rar", fg = "lightred", bold = true },
+	{ url  = "*.rpm", fg = "lightred", bold = true },
+	{ url  = "*.rz", fg = "lightred", bold = true },
+	{ url  = "*.sar", fg = "lightred", bold = true },
+	{ url  = "*.swm", fg = "lightred", bold = true },
+	{ url  = "*.t7z", fg = "lightred", bold = true },
+	{ url  = "*.tar", fg = "lightred", bold = true },
+	{ url  = "*.taz", fg = "lightred", bold = true },
+	{ url  = "*.tbz", fg = "lightred", bold = true },
+	{ url  = "*.tbz2", fg = "lightred", bold = true },
+	{ url  = "*.tgz", fg = "lightred", bold = true },
+	{ url  = "*.tlz", fg = "lightred", bold = true },
+	{ url  = "*.txz", fg = "lightred", bold = true },
+	{ url  = "*.tz", fg = "lightred", bold = true },
+	{ url  = "*.tzo", fg = "lightred", bold = true },
+	{ url  = "*.tzst", fg = "lightred", bold = true },
+	{ url  = "*.udeb", fg = "lightred", bold = true },
+	{ url  = "*.war", fg = "lightred", bold = true },
+	{ url  = "*.whl", fg = "lightred", bold = true },
+	{ url  = "*.wim", fg = "lightred", bold = true },
+	{ url  = "*.xz", fg = "lightred", bold = true },
+	{ url  = "*.z", fg = "lightred", bold = true },
+	{ url  = "*.zip", fg = "lightred", bold = true },
+	{ url  = "*.zoo", fg = "lightred", bold = true },
+	{ url  = "*.zst", fg = "lightred", bold = true },
+
+	# Images
+	{ url  = "*.avif", fg = "magenta", bold = true },
+	{ url  = "*.jpg", fg = "magenta", bold = true },
+	{ url  = "*.jpeg", fg = "magenta", bold = true },
+	{ url  = "*.mjpg", fg = "magenta", bold = true },
+	{ url  = "*.mjpeg", fg = "magenta", bold = true },
+	{ url  = "*.gif", fg = "magenta", bold = true },
+	{ url  = "*.bmp", fg = "magenta", bold = true },
+	{ url  = "*.pbm", fg = "magenta", bold = true },
+	{ url  = "*.pgm", fg = "magenta", bold = true },
+	{ url  = "*.ppm", fg = "magenta", bold = true },
+	{ url  = "*.tga", fg = "magenta", bold = true },
+	{ url  = "*.xbm", fg = "magenta", bold = true },
+	{ url  = "*.xpm", fg = "magenta", bold = true },
+	{ url  = "*.tif", fg = "magenta", bold = true },
+	{ url  = "*.tiff", fg = "magenta", bold = true },
+	{ url  = "*.png", fg = "magenta", bold = true },
+	{ url  = "*.svg", fg = "magenta", bold = true },
+	{ url  = "*.svgz", fg = "magenta", bold = true },
+	{ url  = "*.mng", fg = "magenta", bold = true },
+	{ url  = "*.pcx", fg = "magenta", bold = true },
+	{ url  = "*.webp", fg = "magenta", bold = true },
+	{ url  = "*.xcf", fg = "magenta", bold = true },
+	{ url  = "*.xwd", fg = "magenta", bold = true },
+	{ url  = "*.cgm", fg = "magenta", bold = true },
+	{ url  = "*.emf", fg = "magenta", bold = true },
+
+	# Video
+	{ mime = "video/*", fg = "magenta", bold = true },
+	{ url  = "*.mov", fg = "magenta", bold = true },
+	{ url  = "*.mpg", fg = "magenta", bold = true },
+	{ url  = "*.mpeg", fg = "magenta", bold = true },
+	{ url  = "*.m2v", fg = "magenta", bold = true },
+	{ url  = "*.mkv", fg = "magenta", bold = true },
+	{ url  = "*.webm", fg = "magenta", bold = true },
+	{ url  = "*.ogm", fg = "magenta", bold = true },
+	{ url  = "*.mp4", fg = "magenta", bold = true },
+	{ url  = "*.m4v", fg = "magenta", bold = true },
+	{ url  = "*.mp4v", fg = "magenta", bold = true },
+	{ url  = "*.vob", fg = "magenta", bold = true },
+	{ url  = "*.qt", fg = "magenta", bold = true },
+	{ url  = "*.nuv", fg = "magenta", bold = true },
+	{ url  = "*.wmv", fg = "magenta", bold = true },
+	{ url  = "*.asf", fg = "magenta", bold = true },
+	{ url  = "*.rm", fg = "magenta", bold = true },
+	{ url  = "*.rmvb", fg = "magenta", bold = true },
+	{ url  = "*.flc", fg = "magenta", bold = true },
+	{ url  = "*.avi", fg = "magenta", bold = true },
+	{ url  = "*.fli", fg = "magenta", bold = true },
+	{ url  = "*.flv", fg = "magenta", bold = true },
+	{ url  = "*.gl", fg = "magenta", bold = true },
+	{ url  = "*.dl", fg = "magenta", bold = true },
+	{ url  = "*.yuv", fg = "magenta", bold = true },
+	{ url  = "*.ogv", fg = "magenta", bold = true },
+	{ url  = "*.ogx", fg = "magenta", bold = true },
+
+	# Audio
+	{ mime = "audio/*", fg = "cyan" },
+	{ url  = "*.aac", fg = "cyan" },
+	{ url  = "*.au", fg = "cyan" },
+	{ url  = "*.flac", fg = "cyan" },
+	{ url  = "*.m4a", fg = "cyan" },
+	{ url  = "*.mid", fg = "cyan" },
+	{ url  = "*.midi", fg = "cyan" },
+	{ url  = "*.mka", fg = "cyan" },
+	{ url  = "*.mp3", fg = "cyan" },
+	{ url  = "*.mpc", fg = "cyan" },
+	{ url  = "*.ogg", fg = "cyan" },
+	{ url  = "*.ra", fg = "cyan" },
+	{ url  = "*.wav", fg = "cyan" },
+	{ url  = "*.oga", fg = "cyan" },
+	{ url  = "*.opus", fg = "cyan" },
+	{ url  = "*.spx", fg = "cyan" },
+	{ url  = "*.xspf", fg = "cyan" },
+
+	# Editor leftovers, partial downloads and package manager backups
+	{ url  = "*~", fg = "darkgray" },
+	{ url  = "*#", fg = "darkgray" },
+	{ url  = "*.bak", fg = "darkgray" },
+	{ url  = "*.crdownload", fg = "darkgray" },
+	{ url  = "*.dpkg-dist", fg = "darkgray" },
+	{ url  = "*.dpkg-new", fg = "darkgray" },
+	{ url  = "*.dpkg-old", fg = "darkgray" },
+	{ url  = "*.dpkg-tmp", fg = "darkgray" },
+	{ url  = "*.old", fg = "darkgray" },
+	{ url  = "*.orig", fg = "darkgray" },
+	{ url  = "*.part", fg = "darkgray" },
+	{ url  = "*.rej", fg = "darkgray" },
+	{ url  = "*.rpmnew", fg = "darkgray" },
+	{ url  = "*.rpmorig", fg = "darkgray" },
+	{ url  = "*.rpmsave", fg = "darkgray" },
+	{ url  = "*.swp", fg = "darkgray" },
+	{ url  = "*.tmp", fg = "darkgray" },
+	{ url  = "*.ucf-dist", fg = "darkgray" },
+	{ url  = "*.ucf-new", fg = "darkgray" },
+	{ url  = "*.ucf-old", fg = "darkgray" },
+
+	# Worth spotting in a crowded directory
+	{ url  = "*README.md", fg = "lightyellow", bold = true },
+	{ url  = "*Makefile", fg = "lightyellow", bold = true },
+	{ url  = "*PKGBUILD", fg = "lightyellow", bold = true },
+]
+# ---------------------------------------------

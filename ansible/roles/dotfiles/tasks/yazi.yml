@@ -1,0 +1,27 @@
+---
+- name: "{{ dotfiles_user }}: work out which yazi plugins should be installed"
+  ansible.builtin.set_fact:
+    dotfiles_yazi_plugins: >-
+      {{ lookup('ansible.builtin.file', role_path ~ '/files/config/yazi/package.toml')
+         | regex_findall('use\s*=\s*"([^"]+)"')
+         | map('regex_replace', '^.*[:/]', '')
+         | map('regex_replace', '$', '.yazi')
+         | sort }}
+
+- name: "{{ dotfiles_user }}: see which of them are already there"
+  ansible.builtin.find:
+    paths: "{{ dotfiles_home }}/.config/yazi/plugins"
+    file_type: directory
+    recurse: false
+  register: dotfiles_yazi_installed
+
+- name: "{{ dotfiles_user }}: install the yazi plugins"
+  when: dotfiles_yazi_plugins | difference(dotfiles_yazi_installed.files | map(attribute='path') | map('basename')) | length > 0
+  become: "{{ dotfiles_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dotfiles_user }}"
+  ansible.builtin.command:
+    argv: [ya, pkg, install]
+  environment:
+    HOME: "{{ dotfiles_home }}"
+  register: dotfiles_yazi_pkg
+  changed_when: dotfiles_yazi_pkg.rc == 0

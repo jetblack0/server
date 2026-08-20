@@ -41,6 +41,10 @@
       loop_control:
         label: "{{ item.dest }}"
 
+    - name: "{{ dotfiles_user }}: fetch the yazi plugins"
+      ansible.builtin.include_tasks: yazi.yml
+      when: "'yazi' in dotfiles_config_dirs"
+
     - name: "{{ dotfiles_user }}: leave the locale and aliases in bash too"
       ansible.builtin.blockinfile:
         path: "{{ dotfiles_home }}/.bashrc"
@@ -50,11 +54,6 @@
         mode: "0644"
         marker: "# {mark} ansible managed -- personal aliases"
         block: |
-          # An interactive non-login bash reads this file and nothing else:
-          # Debian and Ubuntu never source /etc/profile.d from it, and a
-          # ~/.bashrc created from nothing (root, where the distro ships
-          # none) has no /etc/bashrc chain either. Without a UTF-8 locale
-          # tmux writes every glyph it sends here as `_`.
           if [ "$(locale charmap 2>/dev/null)" != "UTF-8" ]; then
             unset LC_ALL LC_CTYPE
             export LANG=C.UTF-8
