@@ -10,6 +10,7 @@ dotfiles_login_shell: false
 # ---------------------------------------------
 dotfiles_config_dirs:
   - bat
+  - git
   - nvim
   - shell
   - tmux
