@@ -1,9 +1,2 @@
 ---
-# Loaded in all three models, because it sits next to the playbook rather than
-# in an inventory. Playbook group_vars rank below inventory host vars, so a
-# host that needs a particular interpreter can still say so.
-
-# Discovery, minus the advisory warning about it. ansible-pull would otherwise
-# print it on every unattended run: it never reads ansible.cfg, since it runs
-# from its own checkout root.
 ansible_python_interpreter: auto_silent

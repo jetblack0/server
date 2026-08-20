@@ -8,3 +8,6 @@
 
 - name: Install the base packages
   ansible.builtin.include_tasks: "{{ packages_manager }}.yml"
+
+- name: Fill in the terminal descriptions the distro leaves out
+  ansible.builtin.include_tasks: terminfo.yml

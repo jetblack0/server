@@ -1,0 +1,17 @@
+---
+- name: Compile the missing terminal descriptions
+  become: true
+  ansible.builtin.shell:
+    cmd: |
+      set -u
+      if ! infocmp -x '{{ item.from }}' >/dev/null 2>&1; then
+        echo "no '{{ item.from }}' description here to inherit from" >&2
+        exit 1
+      fi
+      printf '%s|alias for %s, compiled by ansible,\n\tuse=%s,\n' \
+        '{{ item.term }}' '{{ item.from }}' '{{ item.from }}' |
+        tic -x -o '{{ packages_terminfo_dir }}' -
+    creates: "{{ packages_terminfo_dir }}/{{ item.term[0] }}/{{ item.term }}"
+  loop: "{{ packages_terminfo_aliases }}"
+  loop_control:
+    label: "{{ item.term }} -> {{ item.from }}"

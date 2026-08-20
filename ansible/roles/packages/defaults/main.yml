@@ -12,7 +12,8 @@ packages:
   # shell & terminal
   - { name: zsh }
   - { name: tmux }
-  - { name: ncurses-term } # terminfo for kitty, ghostty, alacritty, etc.
+  - { name: ncurses-term } # terminfo for ghostty, alacritty, foot, etc.
+  - { name: ncurses, apt: ncurses-bin } # tic, to compile the aliases below
   - { name: less }
 
   # files & archives
@@ -44,3 +45,9 @@ packages_exclude: []
 #   ansible-pull ... -e @/etc/ansible/pull-vars.yml
 # ---------------------------------------------
 packages_extra: []
+
+# TERM info and aliases.
+# ---------------------------------------------
+packages_terminfo_dir: /usr/share/terminfo
+packages_terminfo_aliases:
+  - { term: xterm-kitty, from: kitty }
