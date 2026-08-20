@@ -17,6 +17,7 @@ packages:
   - { name: less }
 
   # files & archives
+  - { name: file }
   - { name: findutils }
   - { name: tar }
   - { name: gzip }
