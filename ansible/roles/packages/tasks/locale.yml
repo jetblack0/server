@@ -1,0 +1,14 @@
+---
+- name: Give every login a UTF-8 locale
+  become: true
+  ansible.builtin.copy:
+    dest: "{{ packages_locale_profile }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      if [ "$(locale charmap 2>/dev/null)" != "UTF-8" ]; then
+          unset LC_ALL LC_CTYPE
+          LANG={{ packages_locale }}
+          export LANG
+      fi

@@ -46,6 +46,11 @@ packages_exclude: []
 # ---------------------------------------------
 packages_extra: []
 
+# Locale every login on this box falls back to.
+# ---------------------------------------------
+packages_locale: C.UTF-8
+packages_locale_profile: /etc/profile.d/zz-utf8-locale.sh
+
 # TERM info and aliases.
 # ---------------------------------------------
 packages_terminfo_dir: /usr/share/terminfo

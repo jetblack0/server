@@ -9,5 +9,8 @@
 - name: Install the base packages
   ansible.builtin.include_tasks: "{{ packages_manager }}.yml"
 
+- name: Give every login a UTF-8 locale
+  ansible.builtin.include_tasks: locale.yml
+
 - name: Fill in the terminal descriptions the distro leaves out
   ansible.builtin.include_tasks: terminfo.yml
