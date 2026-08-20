@@ -12,6 +12,14 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 
+# Locale
+# ---------------------------------------------
+if [[ "$(locale charmap 2>/dev/null)" != UTF-8 ]]; then
+	unset LC_ALL LC_CTYPE
+	export LANG=C.UTF-8
+fi
+
+
 # Keymap
 # ---------------------------------------------
 bindkey -v
