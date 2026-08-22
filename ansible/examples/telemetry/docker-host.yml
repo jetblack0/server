@@ -1,0 +1,51 @@
+# Telemetry for a box whose workloads run in docker -- plain `docker run`,
+# compose, or swarm alike. The playbook fails, on purpose, if docker is
+# not actually on the box.
+#
+# Copy this file, replace the placeholder values, and hand it to the
+# playbook:
+#
+#   push/local:  ansible-playbook ... telemetry.yml -e @my-box.yml
+#   pull:        the file must already be on the box, ansible-pull reads
+#                @-files before it has cloned anything:
+#
+#                ansible-pull -U <this repo> -i localhost, \
+#                    ansible/telemetry.yml -e @/etc/ansible/telemetry.yml
+#
+# Everything the playbook understands is documented in
+# ansible/roles/alloy/defaults/main.yml.
+---
+# What this box exports.
+alloy_metrics: [node, docker]
+alloy_logs: [docker, journal]
+
+# Where it goes.
+alloy_prometheus_url: https://prometheus.example.com/api/v1/write
+alloy_loki_url: https://loki.example.com/loki/api/v1/push
+
+# Stamped on every metric and log line this box exports.
+alloy_labels:
+  env: prod
+  region: ap-east-1
+  team: platform
+
+# Optional
+# ---------------------------------------------
+# engine-level container state (restarts, health, state) ships with docker
+# metrics by default, under job=docker-state; to opt out:
+# alloy_docker_state: false
+
+# loki multi-tenancy:
+# alloy_loki_tenant_id: ops
+
+# basic auth, per endpoint:
+# alloy_prometheus_username: alloy
+# alloy_prometheus_password: "..."
+# alloy_loki_username: alloy
+# alloy_loki_password: "..."
+
+# prometheus endpoints already listening on this box, scraped and forwarded
+# with the same labels (path defaults to /metrics):
+# alloy_metrics_extra:
+#   - { job: dcgm-exporter, address: "127.0.0.1:9400" }
+#   - { job: my-app, address: "127.0.0.1:8080", path: /internal/metrics }
