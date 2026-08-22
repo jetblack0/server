@@ -19,7 +19,7 @@ image_quality = 70                     # 50-90, lower is faster to decode
 # ---------------------------------------------
 [opener]
 edit = [
-	{ run = 'nvim "$@"', block = true, for = "unix" },
+	{ run = 'nvim %s', block = true, for = "unix" },
 ]
 # ---------------------------------------------
 
