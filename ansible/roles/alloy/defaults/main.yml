@@ -1,0 +1,34 @@
+---
+# What to collect. Both lists default to empty:
+#   metrics: node     host metrics (the node-exporter set, plus a textfile
+#                     directory at /var/lib/alloy/textfile for your own)
+#            docker   per-container cpu/memory/network/disk/oom, via the
+#                     embedded cadvisor
+#   logs:    docker   container stdout/stderr
+#            journal  the systemd journal
+# ---------------------------------------------
+alloy_metrics: []
+alloy_logs: []
+
+# Where it goes. Each URL is required as soon as the matching list above
+# names a source.
+# ---------------------------------------------
+alloy_prometheus_url: "" # e.g. https://prometheus.example.com/api/v1/write
+alloy_loki_url: ""       # e.g. https://loki.example.com/loki/api/v1/push
+
+# Credentials for those endpoints (basic auth), and the loki tenant. Empty
+# means the block is left out of the config entirely.
+# ---------------------------------------------
+alloy_prometheus_username: ""
+alloy_prometheus_password: ""
+alloy_loki_username: ""
+alloy_loki_password: ""
+alloy_loki_tenant_id: ""
+
+# Stamped on every metric and log line this box exports.
+# ---------------------------------------------
+alloy_labels: {}
+
+alloy_version: "1.18.1"
+alloy_http_port: 12345
+alloy_journal_max_age: "12h"

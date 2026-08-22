@@ -1,0 +1,23 @@
+# push    ansible-playbook -i inventory telemetry.yml -l my-box -e @config.yml
+# local   ansible-playbook -i localhost, -c local telemetry.yml -e @config.yml
+# pull    ansible-pull -U <repo> -i localhost, ansible/telemetry.yml -e @config.yml
+#
+# The variables file is not optional: it says what this box collects and
+# where it sends it, and the play fails without one. The smallest useful one:
+#
+#   alloy_metrics: [node]
+#   alloy_logs: [journal]
+#   alloy_prometheus_url: https://prometheus.example.com/api/v1/write
+#   alloy_loki_url: https://loki.example.com/loki/api/v1/push
+#
+# The full contract is documented in roles/alloy/defaults/main.yml.
+
+---
+- name: Export telemetry to the central backend with Grafana Alloy
+  hosts: all
+
+  become: true
+  gather_facts: true
+
+  roles:
+    - { role: alloy, tags: alloy }

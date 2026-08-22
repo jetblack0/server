@@ -1,0 +1,15 @@
+---
+# The sources the config template knows how to render. main.yml rejects
+# anything else by name.
+alloy_known_metrics: [node, docker]
+alloy_known_logs: [docker, journal]
+
+# Both docker sources need the daemon socket, and the unit ordering.
+alloy_wants_docker: "{{ 'docker' in alloy_metrics or 'docker' in alloy_logs }}"
+
+# Grafana publishes more architectures than these; add a mapping when a box
+# actually needs one.
+alloy_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+alloy_arch: "{{ alloy_arch_map[ansible_facts['architecture']] }}"

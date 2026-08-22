@@ -1,0 +1,68 @@
+---
+# The contract first: fail fast and specifically, because under ansible-pull
+# nobody is watching the run -- a half-configured collector that starts
+# anyway would ship nothing and look healthy doing it.
+
+- name: Fail unless the caller said what to collect
+  ansible.builtin.fail:
+    msg: >-
+      alloy_metrics and alloy_logs are both empty, so there is nothing to
+      collect. Which telemetry a box exports is the caller's decision:
+      pass a variables file (-e @my-box.yml) -- the contract is documented
+      in roles/alloy/defaults/main.yml.
+  when: (alloy_metrics + alloy_logs) | length == 0
+
+- name: Fail on a source the config does not know
+  ansible.builtin.fail:
+    msg: >-
+      Unknown source(s):
+      {{ (alloy_metrics | difference(alloy_known_metrics))
+         + (alloy_logs | difference(alloy_known_logs)) }}.
+      alloy_metrics takes {{ alloy_known_metrics }},
+      alloy_logs takes {{ alloy_known_logs }}.
+  when: >-
+    (alloy_metrics | difference(alloy_known_metrics)) | length > 0
+    or (alloy_logs | difference(alloy_known_logs)) | length > 0
+
+- name: Fail when metrics are wanted but no prometheus URL is given
+  ansible.builtin.fail:
+    msg: >-
+      alloy_metrics names {{ alloy_metrics }} but alloy_prometheus_url is
+      empty. Point it at the remote-write endpoint, e.g.
+      https://prometheus.example.com/api/v1/write
+  when: alloy_metrics | length > 0 and alloy_prometheus_url | length == 0
+
+- name: Fail when logs are wanted but no loki URL is given
+  ansible.builtin.fail:
+    msg: >-
+      alloy_logs names {{ alloy_logs }} but alloy_loki_url is empty.
+      Point it at the push endpoint, e.g.
+      https://loki.example.com/loki/api/v1/push
+  when: alloy_logs | length > 0 and alloy_loki_url | length == 0
+
+- name: Fail on an unsupported CPU architecture
+  ansible.builtin.fail:
+    msg: >-
+      No release asset is mapped for '{{ ansible_facts['architecture'] }}'.
+      Add it to alloy_arch_map in vars/main.yml.
+  when: ansible_facts['architecture'] not in alloy_arch_map
+
+- name: Check for the docker daemon's socket
+  ansible.builtin.stat:
+    path: /var/run/docker.sock
+  register: alloy_docker_sock
+  when: alloy_wants_docker
+
+- name: Fail when docker telemetry is wanted without a docker daemon
+  ansible.builtin.fail:
+    msg: >-
+      'docker' is named as a source but /var/run/docker.sock does not exist.
+      Install and start docker first, or drop the docker sources -- alloy
+      would otherwise sit there retrying a socket that never answers.
+  when: alloy_wants_docker and not alloy_docker_sock.stat.exists
+
+- name: Install the pinned Alloy release
+  ansible.builtin.include_tasks: install.yml
+
+- name: Configure Alloy and prove it came up
+  ansible.builtin.include_tasks: configure.yml

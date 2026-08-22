@@ -1,0 +1,49 @@
+---
+- name: Probe the installed Alloy version
+  ansible.builtin.command: /usr/local/bin/alloy --version
+  register: alloy_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install Alloy {{ alloy_version }}
+  when: alloy_probe.rc != 0 or alloy_version not in alloy_probe.stdout
+  block:
+    - name: Ensure unzip is available
+      ansible.builtin.package:
+        name: unzip
+        state: present
+
+    - name: Download and extract the release archive
+      ansible.builtin.unarchive:
+        src: "https://github.com/grafana/alloy/releases/download/v{{ alloy_version }}/alloy-linux-{{ alloy_arch }}.zip"
+        remote_src: true
+        dest: /tmp
+
+    - name: Install the binary
+      ansible.builtin.copy:
+        src: "/tmp/alloy-linux-{{ alloy_arch }}"
+        remote_src: true
+        dest: /usr/local/bin/alloy
+        owner: root
+        group: root
+        mode: "0755"
+      notify: restart alloy
+
+    - name: Clean up the extracted binary
+      ansible.builtin.file:
+        path: "/tmp/alloy-linux-{{ alloy_arch }}"
+        state: absent
+
+- name: Ensure the Alloy directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - /etc/alloy
+    - /var/lib/alloy
+    - /var/lib/alloy/data
+    - /var/lib/alloy/textfile

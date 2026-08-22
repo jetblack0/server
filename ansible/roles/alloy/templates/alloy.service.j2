@@ -1,0 +1,21 @@
+# RENDERED BY ANSIBLE -- do not edit on the host; change the template + re-run.
+[Unit]
+Description=Grafana Alloy
+Documentation=https://grafana.com/docs/alloy
+Wants=network-online.target
+After=network-online.target{{ ' docker.service' if alloy_wants_docker else '' }}
+
+[Service]
+# Root, because the sources need it: the journal, the docker socket, and
+# cadvisor's cgroup and /dev/kmsg reads are all root-only by default.
+Restart=on-failure
+RestartSec=5
+ExecStart=/usr/local/bin/alloy run \
+    --server.http.listen-addr=127.0.0.1:{{ alloy_http_port }} \
+    --storage.path=/var/lib/alloy/data \
+    /etc/alloy/config.alloy
+ExecReload=/bin/kill -HUP $MAINPID
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

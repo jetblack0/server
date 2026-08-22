@@ -1,0 +1,44 @@
+---
+- name: Render the Alloy configuration
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: /etc/alloy/config.alloy
+    owner: root
+    group: root
+    mode: "0600" # may carry basic-auth credentials
+    # fmt parses the file, so a syntax error fails the task instead of
+    # leaving a config the service will die on
+    validate: /usr/local/bin/alloy fmt %s
+  notify: restart alloy
+
+- name: Install the systemd unit
+  ansible.builtin.template:
+    src: alloy.service.j2
+    dest: /etc/systemd/system/alloy.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: alloy_unit
+  notify: restart alloy
+
+- name: Ensure Alloy is enabled and running
+  ansible.builtin.systemd_service:
+    name: alloy
+    enabled: true
+    state: started
+    daemon_reload: "{{ alloy_unit is changed }}"
+
+- name: Apply a pending restart before probing
+  ansible.builtin.meta: flush_handlers
+
+# The real verification: a config that parses but names a component wrong
+# makes alloy exit on start, and this catches it while ansible still has
+# the floor.
+- name: Wait for Alloy to report ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ alloy_http_port }}/-/ready"
+    status_code: 200
+  register: alloy_ready
+  until: alloy_ready.status == 200
+  retries: 12
+  delay: 5
