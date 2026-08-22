@@ -1,0 +1,9 @@
+# DEPLOYED BY ANSIBLE -- do not edit on the host; change roles/alloy/files/ + re-run.
+[Unit]
+Description=Export docker container state for the Alloy textfile collector
+After=docker.service
+ConditionPathExists=/var/run/docker.sock
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/docker-state-textfile /var/lib/alloy/textfile/docker_state.prom

@@ -85,5 +85,8 @@
 - name: Install the pinned Alloy release
   ansible.builtin.include_tasks: install.yml
 
+- name: Export engine-level container state alongside docker metrics
+  ansible.builtin.include_tasks: docker-state.yml
+
 - name: Configure Alloy and prove it came up
   ansible.builtin.include_tasks: configure.yml

@@ -38,6 +38,12 @@ alloy_loki_tenant_id: ""
 # ---------------------------------------------
 alloy_labels: {}
 
+# With docker metrics, a bundled script + 30s timer also export engine-level
+# container state (restart count, one-hot state/health, started-at) under
+# job=docker-state.
+# ---------------------------------------------
+alloy_docker_state: true
+
 alloy_version: "1.18.1"
 alloy_http_port: 12345
 alloy_journal_max_age: "12h"

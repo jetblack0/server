@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""Export docker container state as Prometheus textfile metrics.
+
+Some alerting signals never reach cAdvisor, because they live in the docker
+engine rather than in cgroups:
+
+  - restart-policy restarts. Docker restarts the process inside the same
+    container and reuses its cgroup, so cAdvisor never notices.
+  - the engine's own view of the container state (running, exited, ...).
+  - healthcheck results.
+
+This script asks `docker inspect` for all of that and writes it out as a
+.prom file. Alloy's node exporter picks the file up through its textfile
+collector. A systemd timer runs the script every 30 seconds.
+
+Usage:
+
+    docker-state-textfile /var/lib/alloy/textfile/docker_state.prom
+
+The `name` label needs care: it has to stay the same when a workload gets
+replaced. If it changed on every replacement, each replacement would create
+a brand new series. Worse, `docker ps -a` still lists the dead container,
+so the old series would keep reporting `container_state{state="exited"} 1`
+forever, and an alert on it would never resolve.
+
+So the name is derived differently per runtime:
+
+  swarm    Containers are named `<service>.<slot>.<task-id>`, and the task
+           ID changes on every replacement. The task ID is stripped off,
+           leaving `<service>.<slot>` for replicated services and
+           `<service>.<node-id>` for global ones. Both are stable.
+
+  compose  Container names (`<project>-<service>-<n>`) already survive a
+           recreate: compose removes the old container and reuses the
+           name. So the name is used as-is. The exception is
+           `docker compose run`. It leaves a one-off container behind with
+           a fresh name every invocation. Compose marks those with the
+           label `com.docker.compose.oneoff=True`, and they are skipped.
+
+  plain    A `docker run --name` name is stable and used as-is. A container
+           started without --name gets a random name from docker, and will
+           churn a new series every time. That is real host state, so it
+           is reported rather than hidden. Prefer --rm for throwaways.
+
+Stripping the task ID means an old swarm container and its replacement
+share one identity. To keep them from colliding, only the newest container
+per identity is exported. A replaced container drops out of the file, so a
+resolved failure actually resolves. A container that died and was never
+replaced is still the newest one for its identity, so genuine failures
+keep alerting.
+
+The container ID is deliberately not a label. It would churn just like the
+task ID does. To find one specific container, use cAdvisor or the
+container logs.
+
+Exported metrics, all labelled with name, image, swarm_service, swarm_task:
+
+  container_restart_count_total    Restart-policy restarts, from docker's
+                                   RestartCount. Docker resets it on a
+                                   manual (re)start, and a replacement task
+                                   starts from zero again. PromQL treats
+                                   both as an ordinary counter reset.
+
+  container_state_started_seconds  When the container last started, as
+                                   unix time. changes() on this catches
+                                   every kind of restart, task replacement
+                                   included.
+
+  container_state                  One-hot engine state, one series per
+                                   state (running, exited, ...).
+
+  container_health_status          One-hot healthcheck result (healthy,
+                                   unhealthy, starting, none).
+"""
+
+import json
+import re
+import subprocess
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+DOCKER_STATES = ("created", "restarting", "running", "removing", "paused", "exited", "dead")
+HEALTH_STATUSES = ("healthy", "unhealthy", "starting", "none")
+
+# `<anything>.<task-id>`, where a task ID is a long lowercase base36 string.
+# Matches both `web.1.oq4ex...` (replicated) and `angie.3s8e4o...ggo1n2p...`
+# (global, where the middle segment is the node ID).
+SWARM_TASK_ID = re.compile(r"^(.+)\.[a-z0-9]{20,}$")
+
+
+def escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def rfc3339_epoch(value: str) -> float:
+    # docker returns RFC3339 with nanoseconds; python only parses up to
+    # microseconds, so trim. "0001-01-01T00:00:00Z" means never started.
+    if not value or value.startswith("0001-01-01"):
+        return 0.0
+    trimmed = re.sub(r"(\.\d{6})\d+", r"\1", value).replace("Z", "+00:00")
+    return datetime.fromisoformat(trimmed).astimezone(timezone.utc).timestamp()
+
+
+def strip_task_id(task_name: str) -> str:
+    """`web.1.oq4ex7v0...` -> `web.1`. Left alone if it doesn't match."""
+    match = SWARM_TASK_ID.match(task_name)
+    return match.group(1) if match else task_name
+
+
+def is_oneoff(container: dict) -> bool:
+    """`docker compose run` containers: a new random name every invocation.
+
+    They are left behind on exit, so each run would otherwise add a series
+    stuck at exited that nothing ever clears. Compose marks them for us.
+    """
+    labels = container.get("Config", {}).get("Labels") or {}
+    return labels.get("com.docker.compose.oneoff", "").lower() == "true"
+
+
+def identity(container: dict) -> str:
+    """Stable key for a workload, across replacements. See module docstring."""
+    labels = container.get("Config", {}).get("Labels") or {}
+    task = labels.get("com.docker.swarm.task.name", "")
+    if task:
+        return strip_task_id(task)
+    # compose and plain docker: the container name already survives a
+    # recreate, so it needs no massaging.
+    return container.get("Name", "").lstrip("/")
+
+
+def newest_per_identity(containers: list) -> list:
+    """Keep only the latest container for each identity.
+
+    Swarm leaves superseded task containers on the node until it garbage
+    collects them, and they all share one identity once the task ID is
+    stripped. Created is monotonic per identity — the replacement is always
+    made after the container it replaces — so the newest one is the live task.
+    """
+    newest: dict = {}
+    for container in containers:
+        if is_oneoff(container):
+            continue
+        key = identity(container)
+        rank = (
+            rfc3339_epoch(container.get("Created", "")),
+            rfc3339_epoch(container.get("State", {}).get("StartedAt", "")),
+        )
+        if key not in newest or rank > newest[key][0]:
+            newest[key] = (rank, container)
+    return [container for _, container in newest.values()]
+
+
+def inspect_all() -> list:
+    ids = subprocess.run(
+        ["docker", "ps", "-aq"], check=True, capture_output=True, text=True
+    ).stdout.split()
+    if not ids:
+        return []
+    out = subprocess.run(
+        ["docker", "inspect"] + ids, check=True, capture_output=True, text=True
+    ).stdout
+    return json.loads(out)
+
+
+def render(containers: list) -> str:
+    rows = {"restart": [], "started": [], "state": [], "health": []}
+    for c in newest_per_identity(containers):
+        labels = c.get("Config", {}).get("Labels") or {}
+        state = c.get("State", {})
+        swarm_task = labels.get("com.docker.swarm.task.name", "")
+        base = (
+            f'name="{escape(identity(c))}",'
+            f'image="{escape(c.get("Config", {}).get("Image", ""))}",'
+            f'swarm_service="{escape(labels.get("com.docker.swarm.service.name", ""))}",'
+            f'swarm_task="{escape(strip_task_id(swarm_task) if swarm_task else "")}"'
+        )
+        rows["restart"].append(
+            f'container_restart_count_total{{{base}}} {c.get("RestartCount", 0)}'
+        )
+        rows["started"].append(
+            f'container_state_started_seconds{{{base}}} {rfc3339_epoch(state.get("StartedAt", ""))}'
+        )
+        current = state.get("Status", "")
+        for s in DOCKER_STATES:
+            rows["state"].append(
+                f'container_state{{{base},state="{s}"}} {1 if s == current else 0}'
+            )
+        health = (state.get("Health") or {}).get("Status") or "none"
+        for h in HEALTH_STATUSES:
+            rows["health"].append(
+                f'container_health_status{{{base},health_status="{h}"}} {1 if h == health else 0}'
+            )
+    return "\n".join(
+        [
+            "# HELP container_restart_count_total Restart-policy restarts per docker inspect RestartCount (resets on manual start or task replacement).",
+            "# TYPE container_restart_count_total counter",
+            *rows["restart"],
+            "# HELP container_state_started_seconds Unix time the container last started.",
+            "# TYPE container_state_started_seconds gauge",
+            *rows["started"],
+            "# HELP container_state One-hot docker engine container state.",
+            "# TYPE container_state gauge",
+            *rows["state"],
+            "# HELP container_health_status One-hot docker healthcheck status (none = no healthcheck defined).",
+            "# TYPE container_health_status gauge",
+            *rows["health"],
+            "",
+        ]
+    )
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} /path/to/output.prom", file=sys.stderr)
+        return 2
+    target = Path(sys.argv[1])
+    body = render(inspect_all())
+    # atomic replace so the collector never reads a half-written file
+    with tempfile.NamedTemporaryFile(
+        "w", dir=target.parent, prefix=target.name + ".", delete=False
+    ) as tmp:
+        tmp.write(body)
+    Path(tmp.name).chmod(0o644)
+    Path(tmp.name).replace(target)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

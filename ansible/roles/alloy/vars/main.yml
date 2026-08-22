@@ -7,6 +7,11 @@ alloy_known_logs: [docker, journal]
 # Both docker sources need the daemon socket, and the unit ordering.
 alloy_wants_docker: "{{ 'docker' in alloy_metrics or 'docker' in alloy_logs }}"
 
+# Engine-level container state rides the node exporter's textfile
+# collector, so wanting it keeps that pipeline alive (textfile-only) even
+# on a box without node metrics.
+alloy_wants_docker_state: "{{ 'docker' in alloy_metrics and alloy_docker_state | bool }}"
+
 # Metrics come from the built-in sources or the caller's own endpoints;
 # either one makes the remote-write half of the config real.
 alloy_wants_metrics: "{{ alloy_metrics | length > 0 or alloy_metrics_extra | length > 0 }}"

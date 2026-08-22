@@ -39,15 +39,25 @@ prometheus.remote_write "default" {
   }
 }
 {% endif %}
-{% if 'node' in alloy_metrics %}
+{% if 'node' in alloy_metrics or alloy_wants_docker_state %}
 
 // Host metrics: the node-exporter set.
 prometheus.exporter.unix "node" {
+{% if 'node' not in alloy_metrics %}
+  // docker-state only: the textfile collector is this exporter's whole job
+  // on a box that did not ask for node metrics
+  set_collectors = ["textfile"]
+
+  // where docker-state writes, and the extension point for any *.prom file
+  textfile {
+    directory = "/var/lib/alloy/textfile"
+  }
+{% else %}
   disable_collectors = ["ipvs", "btrfs", "infiniband", "xfs", "zfs"]
   enable_collectors  = ["meminfo"]
 
-  // the extension point: any *.prom file dropped here is exported too,
-  // no alloy knowledge required
+  // where docker-state writes, and the extension point: any *.prom file
+  // dropped here is exported too, no alloy knowledge required
   textfile {
     directory = "/var/lib/alloy/textfile"
   }
@@ -65,6 +75,7 @@ prometheus.exporter.unix "node" {
   netdev {
     device_exclude = "^(veth.*|cali.*|[a-f0-9]{15})$"
   }
+{% endif %}
 }
 
 discovery.relabel "node" {

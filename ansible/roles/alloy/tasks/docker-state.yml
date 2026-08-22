@@ -1,0 +1,68 @@
+---
+# A 30s oneshot timer asks `docker inspect` and writes a .prom file for
+# the textfile collector.
+
+- name: Install the docker-state exporter
+  when: alloy_wants_docker_state
+  block:
+    - name: Install the docker-state script
+      ansible.builtin.copy:
+        src: docker-state-textfile
+        dest: /usr/local/bin/docker-state-textfile
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the docker-state timer units
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - docker-state.service
+        - docker-state.timer
+      register: alloy_docker_state_units
+      notify: restart docker-state timer
+
+    - name: Ensure the docker-state timer is enabled and running
+      ansible.builtin.systemd_service:
+        name: docker-state.timer
+        enabled: true
+        state: started
+        daemon_reload: "{{ alloy_docker_state_units is changed }}"
+
+# The timer outlives a config change on its own, and a leftover would keep
+# exporting state for a box that asked to stop, so deselecting docker
+# metrics (or the knob) takes the exporter down with it.
+- name: Remove the docker-state exporter where it is not wanted
+  when: not alloy_wants_docker_state
+  block:
+    - name: Check whether the timer is installed
+      ansible.builtin.stat:
+        path: /etc/systemd/system/docker-state.timer
+      register: alloy_docker_state_timer
+
+    - name: Stop and disable the timer
+      ansible.builtin.systemd_service:
+        name: docker-state.timer
+        enabled: false
+        state: stopped
+      when: alloy_docker_state_timer.stat.exists
+
+    - name: Remove the script, units and exported metrics
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/local/bin/docker-state-textfile
+        - /etc/systemd/system/docker-state.service
+        - /etc/systemd/system/docker-state.timer
+        - /var/lib/alloy/textfile/docker_state.prom
+      register: alloy_docker_state_removed
+
+    - name: Reload systemd after removing the units
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: alloy_docker_state_removed is changed

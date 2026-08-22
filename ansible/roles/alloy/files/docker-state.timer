@@ -1,0 +1,11 @@
+# DEPLOYED BY ANSIBLE -- do not edit on the host; change roles/alloy/files/ + re-run.
+[Unit]
+Description=Run docker-state-textfile every 30s
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
