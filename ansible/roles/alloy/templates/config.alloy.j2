@@ -21,7 +21,7 @@
     replacement  = "{{ job }}"
   }
 {% endmacro %}
-{% if alloy_metrics | length > 0 %}
+{% if alloy_wants_metrics %}
 // ##############################
 // #### Metrics                ##
 // ##############################
@@ -136,6 +136,21 @@ prometheus.relabel "docker_metrics" {
   }
 }
 {% endif %}
+{% for extra in alloy_metrics_extra %}
+{% set extra_label = 'extra_' ~ (extra.job | regex_replace('[^A-Za-z0-9_]', '_')) %}
+
+// {{ extra.job }}: an endpoint the caller declared, scraped as-is.
+discovery.relabel "{{ extra_label }}" {
+  targets = [{"__address__" = "{{ extra.address }}"}]
+{{ static_rules(extra.job) -}}
+}
+
+prometheus.scrape "{{ extra_label }}" {
+  targets      = discovery.relabel.{{ extra_label }}.output
+  metrics_path = "{{ extra.path | default('/metrics') }}"
+  forward_to   = [prometheus.remote_write.default.receiver]
+}
+{% endfor %}
 {% if alloy_logs | length > 0 %}
 
 // ##############################

@@ -7,6 +7,10 @@ alloy_known_logs: [docker, journal]
 # Both docker sources need the daemon socket, and the unit ordering.
 alloy_wants_docker: "{{ 'docker' in alloy_metrics or 'docker' in alloy_logs }}"
 
+# Metrics come from the built-in sources or the caller's own endpoints;
+# either one makes the remote-write half of the config real.
+alloy_wants_metrics: "{{ alloy_metrics | length > 0 or alloy_metrics_extra | length > 0 }}"
+
 # Grafana publishes more architectures than these; add a mapping when a box
 # actually needs one.
 alloy_arch_map:

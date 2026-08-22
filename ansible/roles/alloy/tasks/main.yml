@@ -6,11 +6,11 @@
 - name: Fail unless the caller said what to collect
   ansible.builtin.fail:
     msg: >-
-      alloy_metrics and alloy_logs are both empty, so there is nothing to
-      collect. Which telemetry a box exports is the caller's decision:
-      pass a variables file (-e @my-box.yml) -- the contract is documented
-      in roles/alloy/defaults/main.yml.
-  when: (alloy_metrics + alloy_logs) | length == 0
+      alloy_metrics, alloy_logs and alloy_metrics_extra are all empty, so
+      there is nothing to collect. Which telemetry a box exports is the
+      caller's decision: pass a variables file (-e @my-box.yml) -- the
+      contract is documented in roles/alloy/defaults/main.yml.
+  when: (alloy_metrics + alloy_logs + alloy_metrics_extra) | length == 0
 
 - name: Fail on a source the config does not know
   ansible.builtin.fail:
@@ -24,13 +24,34 @@
     (alloy_metrics | difference(alloy_known_metrics)) | length > 0
     or (alloy_logs | difference(alloy_known_logs)) | length > 0
 
+- name: Fail on a malformed extra metrics endpoint
+  ansible.builtin.fail:
+    msg: >-
+      Every alloy_metrics_extra entry needs a job and an address, e.g.
+      { job: dcgm-exporter, address: "127.0.0.1:9400" }. Got:
+      {{ alloy_metrics_extra }}
+  when: >-
+    alloy_metrics_extra | selectattr('job', 'undefined') | length > 0
+    or alloy_metrics_extra | selectattr('address', 'undefined') | length > 0
+
+- name: Fail on extra metrics endpoints sharing a job name
+  ansible.builtin.fail:
+    msg: >-
+      alloy_metrics_extra job names must be unique -- the job is what tells
+      the series apart in prometheus. Got:
+      {{ alloy_metrics_extra | map(attribute='job') | list }}
+  when: >-
+    alloy_metrics_extra | map(attribute='job') | unique | length
+    != alloy_metrics_extra | length
+
 - name: Fail when metrics are wanted but no prometheus URL is given
   ansible.builtin.fail:
     msg: >-
-      alloy_metrics names {{ alloy_metrics }} but alloy_prometheus_url is
-      empty. Point it at the remote-write endpoint, e.g.
-      https://prometheus.example.com/api/v1/write
-  when: alloy_metrics | length > 0 and alloy_prometheus_url | length == 0
+      Metrics are asked for (alloy_metrics {{ alloy_metrics }},
+      alloy_metrics_extra {{ alloy_metrics_extra | map(attribute='job') | list }})
+      but alloy_prometheus_url is empty. Point it at the remote-write
+      endpoint, e.g. https://prometheus.example.com/api/v1/write
+  when: alloy_wants_metrics and alloy_prometheus_url | length == 0
 
 - name: Fail when logs are wanted but no loki URL is given
   ansible.builtin.fail:

@@ -10,6 +10,15 @@
 alloy_metrics: []
 alloy_logs: []
 
+# Prometheus endpoints scrape alongside:
+#   alloy_metrics_extra:
+#     - { job: dcgm-exporter, address: "127.0.0.1:9400" }
+#     - { job: my-app, address: "127.0.0.1:8080", path: /internal/metrics }
+#
+# job and address are required; path defaults to /metrics.
+# ---------------------------------------------
+alloy_metrics_extra: []
+
 # Where it goes. Each URL is required as soon as the matching list above
 # names a source.
 # ---------------------------------------------
