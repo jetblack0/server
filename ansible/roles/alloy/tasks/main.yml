@@ -25,14 +25,25 @@
     or (alloy_logs | difference(alloy_known_logs)) | length > 0
 
 - name: Fail on a malformed extra metrics endpoint
-  ansible.builtin.fail:
-    msg: >-
-      Every alloy_metrics_extra entry needs a job and an address, e.g.
-      { job: dcgm-exporter, address: "127.0.0.1:9400" }. Got:
-      {{ alloy_metrics_extra }}
-  when: >-
-    alloy_metrics_extra | selectattr('job', 'undefined') | length > 0
-    or alloy_metrics_extra | selectattr('address', 'undefined') | length > 0
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.job is defined and item.address is defined
+      - item | dict2items | map(attribute='key')
+        | difference(alloy_extra_keys) | length == 0
+      - item.scheme | default('http') in ['http', 'https']
+      - not (item.insecure | default(false) | bool)
+        or item.scheme | default('http') == 'https'
+      - (item.username is defined) == (item.password is defined)
+    quiet: true
+    fail_msg: >-
+      Bad alloy_metrics_extra entry: {{ item }}. job and address are
+      required; the optional keys are path, scheme, insecure, username and
+      password. scheme is http or https, insecure needs scheme https, and
+      username and password come together.
+  loop: "{{ alloy_metrics_extra }}"
+  loop_control:
+    label: "{{ item.job | default(item) }}"
 
 - name: Fail on extra metrics endpoints sharing a job name
   ansible.builtin.fail:

@@ -45,7 +45,11 @@ alloy_labels:
 # alloy_loki_password: "..."
 
 # prometheus endpoints already listening on this box, scraped and forwarded
-# with the same labels (path defaults to /metrics):
+# with the same labels. path defaults to /metrics and scheme to http;
+# insecure accepts a self-signed certificate, username/password add
+# basic auth:
 # alloy_metrics_extra:
 #   - { job: dcgm-exporter, address: "127.0.0.1:9400" }
 #   - { job: my-app, address: "127.0.0.1:8080", path: /internal/metrics }
+#   - { job: appliance, address: "10.0.0.7:9443",
+#       scheme: https, insecure: true, username: metrics, password: "..." }

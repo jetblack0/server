@@ -14,8 +14,12 @@ alloy_logs: []
 #   alloy_metrics_extra:
 #     - { job: dcgm-exporter, address: "127.0.0.1:9400" }
 #     - { job: my-app, address: "127.0.0.1:8080", path: /internal/metrics }
+#     - { job: appliance, address: "10.0.0.7:9443",
+#         scheme: https, insecure: true, username: metrics, password: "..." }
 #
-# job and address are required; path defaults to /metrics.
+# job and address are required; path defaults to /metrics, scheme to http.
+# insecure skips certificate verification (self-signed certs) and needs
+# scheme https; username and password add basic auth, always together.
 # ---------------------------------------------
 alloy_metrics_extra: []
 

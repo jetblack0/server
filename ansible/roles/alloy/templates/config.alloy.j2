@@ -208,7 +208,22 @@ discovery.relabel "{{ extra_label }}" {
 prometheus.scrape "{{ extra_label }}" {
   targets      = discovery.relabel.{{ extra_label }}.output
   metrics_path = "{{ extra.path | default('/metrics') }}"
+  scheme       = "{{ extra.scheme | default('http') }}"
   forward_to   = [prometheus.remote_write.default.receiver]
+{% if extra.insecure | default(false) %}
+
+  // the endpoint's certificate is self-signed; encrypt, don't authenticate
+  tls_config {
+    insecure_skip_verify = true
+  }
+{% endif %}
+{% if extra.username is defined %}
+
+  basic_auth {
+    username = "{{ extra.username }}"
+    password = "{{ extra.password }}"
+  }
+{% endif %}
 }
 {% endfor %}
 {% if alloy_logs | length > 0 %}
