@@ -20,6 +20,18 @@ alloy_logs: []
 # job and address are required; path defaults to /metrics, scheme to http.
 # insecure skips certificate verification (self-signed certs) and needs
 # scheme https; username and password add basic auth, always together.
+#
+# Federating another prometheus is the same thing pointed at /federate,
+# which every prometheus serves by default -- the source needs no changes:
+#     - job: paas-federate
+#       address: "10.0.0.8:49910"
+#       scheme: https
+#       insecure: true
+#       username: metrics
+#       password: "..."
+#       path: /federate
+#       honor_labels: true                         # keep original job/instance
+#       params: { "match[]": '{__name__=~".+"}' }  # scope this on a big source
 # ---------------------------------------------
 alloy_metrics_extra: []
 

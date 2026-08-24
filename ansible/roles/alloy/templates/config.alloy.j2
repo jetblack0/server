@@ -105,16 +105,13 @@ prometheus.relabel "node" {
 {% endif %}
 {% if 'docker' in alloy_metrics %}
 
-// Container metrics: the embedded cAdvisor, containers only, with an
-// explicit metric allowlist to keep cardinality flat.
+// Container metrics.
 prometheus.exporter.cadvisor "docker" {
   docker_only               = true
   disable_root_cgroup_stats = true
   store_container_labels    = false
   enabled_metrics           = ["cpu", "memory", "network", "diskIO", "oom_event"]
 
-  // compose and swarm each label their containers; whichever ran this one
-  // decides which of these exist
   allowlisted_container_labels = [
     "com.docker.compose.project",
     "com.docker.compose.service",
@@ -137,15 +134,13 @@ prometheus.scrape "docker_metrics" {
 prometheus.relabel "docker_metrics" {
   forward_to = [prometheus.remote_write.default.receiver]
 
-  // bare container id, not the cgroup path -- covers both cgroup drivers:
+  // bare container id, not the cgroup path, covers both cgroup drivers:
   // cgroupfs (/docker/<id>) and systemd (/system.slice/docker-<id>.scope)
   rule {
     source_labels = ["id"]
     regex         = "(?:/system\\.slice/docker-|/docker/)([a-f0-9]+)(?:\\.scope)?"
     target_label  = "id"
   }
-  // a rule whose source label is absent sets nothing, so the compose and
-  // swarm mappings coexist -- a plain docker run container gets neither
   rule {
     source_labels = ["container_label_com_docker_compose_project"]
     target_label  = "compose_project"
@@ -209,6 +204,17 @@ prometheus.scrape "{{ extra_label }}" {
   targets      = discovery.relabel.{{ extra_label }}.output
   metrics_path = "{{ extra.path | default('/metrics') }}"
   scheme       = "{{ extra.scheme | default('http') }}"
+{% if extra.honor_labels | default(false) %}
+  // federation: the series keep their original job and instance labels
+  honor_labels = true
+{% endif %}
+{% if extra.params is defined %}
+  params       = {
+{% for key, value in extra.params.items() %}
+    "{{ key }}" = [{% for v in ([value] if value is string else value) %}"{{ v | replace('"', '\\"') }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+{% endfor %}
+  }
+{% endif %}
   forward_to   = [prometheus.remote_write.default.receiver]
 {% if extra.insecure | default(false) %}
 

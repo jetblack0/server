@@ -35,12 +35,14 @@
       - not (item.insecure | default(false) | bool)
         or item.scheme | default('http') == 'https'
       - (item.username is defined) == (item.password is defined)
+      - item.params | default({}) is mapping
     quiet: true
     fail_msg: >-
       Bad alloy_metrics_extra entry: {{ item }}. job and address are
-      required; the optional keys are path, scheme, insecure, username and
-      password. scheme is http or https, insecure needs scheme https, and
-      username and password come together.
+      required; the optional keys are path, scheme, insecure, username,
+      password, params and honor_labels. scheme is http or https, insecure
+      needs scheme https, username and password come together, and params
+      is a mapping of query parameters.
   loop: "{{ alloy_metrics_extra }}"
   loop_control:
     label: "{{ item.job | default(item) }}"

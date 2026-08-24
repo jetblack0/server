@@ -53,3 +53,7 @@ alloy_labels:
 #   - { job: my-app, address: "127.0.0.1:8080", path: /internal/metrics }
 #   - { job: appliance, address: "10.0.0.7:9443",
 #       scheme: https, insecure: true, username: metrics, password: "..." }
+#   federating a prometheus embedded in some platform works too:
+#   - { job: paas-federate, address: "10.0.0.8:49910", path: /federate,
+#       scheme: https, insecure: true, username: metrics, password: "...",
+#       honor_labels: true, params: { "match[]": '{__name__=~".+"}' } }

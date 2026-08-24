@@ -6,7 +6,8 @@ alloy_known_logs: [docker, journal]
 
 # Everything an alloy_metrics_extra entry may carry; main.yml rejects
 # unknown keys so a typo'd option fails instead of being ignored.
-alloy_extra_keys: [job, address, path, scheme, insecure, username, password]
+alloy_extra_keys:
+  [job, address, path, scheme, insecure, username, password, params, honor_labels]
 
 # Both docker sources need the daemon socket, and the unit ordering.
 alloy_wants_docker: "{{ 'docker' in alloy_metrics or 'docker' in alloy_logs }}"
