@@ -15,10 +15,14 @@ set -s extended-keys on
 set -as terminal-features 'xterm*:extkeys:clipboard'
 
 set -g focus-events on
-set -g set-clipboard on
-set -g allow-passthrough on            # yazi's image preview
 set -ga update-environment TERM
 set -ga update-environment TERM_PROGRAM
+
+# allow-passthrough arrived in 3.3. Before that everything passed through
+# anyway, so naming the option only earns an error on load.
+%if "#{>=:#{version},3.3}"
+set -g allow-passthrough on            # yazi's image preview
+%endif
 
 # The login shell stays whatever the distro set, so tmux is told explicitly.
 set-option -g default-shell {{ dotfiles_zsh }}
@@ -67,10 +71,22 @@ bind Escape copy-mode
 unbind p
 bind p paste-buffer
 bind-key -T copy-mode-vi 'v' send -X begin-selection
-bind-key -T copy-mode-vi 'y' send -X copy-selection
 # to the previous and next prompt.
 bind-key -T copy-mode-vi '.' send -X search-forward "{{ dotfiles_prompt_icon }} "
 bind-key -T copy-mode-vi ',' send -X search-backward "{{ dotfiles_prompt_icon }} "
+# ---------------------------------------------
+
+
+# Clipboard
+# ---------------------------------------------
+%if "#{>=:#{version},3.4}"
+set -s set-clipboard on
+bind-key -T copy-mode-vi 'y' send -X copy-selection
+%else
+set -s set-clipboard off
+bind-key -T copy-mode-vi 'y' send -X copy-pipe 'printf "\033]52;c;%s\a" "$(base64 -w0)" > #{client_tty}'
+bind-key -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel 'printf "\033]52;c;%s\a" "$(base64 -w0)" > #{client_tty}'
+%endif
 # ---------------------------------------------
 
 
