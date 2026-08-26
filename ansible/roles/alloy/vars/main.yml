@@ -21,6 +21,12 @@ alloy_wants_docker_state: "{{ 'docker' in alloy_metrics and alloy_docker_state |
 # either one makes the remote-write half of the config real.
 alloy_wants_metrics: "{{ alloy_metrics | length > 0 or alloy_metrics_extra | length > 0 }}"
 
+alloy_unzip_install:
+  apt: apt-get -qq update && apt-get -y install unzip
+  dnf: dnf -y install unzip
+  dnf5: dnf -y install unzip
+  yum: yum -y install unzip
+
 # Grafana publishes more architectures than these; add a mapping when a box
 # actually needs one.
 alloy_arch_map:

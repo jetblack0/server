@@ -10,9 +10,9 @@
   when: alloy_probe.rc != 0 or alloy_version not in alloy_probe.stdout
   block:
     - name: Ensure unzip is available
-      ansible.builtin.package:
-        name: unzip
-        state: present
+      ansible.builtin.shell: "{{ alloy_unzip_install[ansible_facts['pkg_mgr']] }}"
+      args:
+        creates: /usr/bin/unzip
 
     - name: Download and extract the release archive
       ansible.builtin.unarchive:
