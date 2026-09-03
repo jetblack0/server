@@ -1,2 +1,29 @@
+[init]
+	defaultBranch = main
+
+[user]
+	name = Henry Chi
+	email = me@unazoomer.com
+
+; [interactive]
+;     side-by-side = true
+;     line-numbers = true
+
 [credential]
+	helper = 
 	helper = store --file ~/.config/git/credentials
+
+[credential "https://github.com/jetblack0/"]
+    username = jetblack0
+
+[merge]
+	tool = codediff
+
+[mergetool "codediff"]
+	cmd = nvim \"$MERGED\" -c \"CodeDiff merge \\\"$MERGED\\\"\"
+
+[includeIf "gitdir:~/Development/work/"]
+	path = ~/.config/git/config.work
+
+[includeIf "gitdir:/opt/repos/"]
+	path = ~/.config/git/config.work
