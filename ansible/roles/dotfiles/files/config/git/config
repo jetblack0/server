@@ -9,21 +9,15 @@
 ;     side-by-side = true
 ;     line-numbers = true
 
-[credential]
-	helper = 
-	helper = store --file ~/.config/git/credentials
-
-[credential "https://github.com/jetblack0/"]
-    username = jetblack0
-
 [merge]
 	tool = codediff
 
 [mergetool "codediff"]
 	cmd = nvim \"$MERGED\" -c \"CodeDiff merge \\\"$MERGED\\\"\"
 
-[includeIf "gitdir:~/Development/work/"]
-	path = ~/.config/git/config.work
+[credential]
+	helper = 
+	helper = store --file ~/.config/git/conf.d/credentials
 
-[includeIf "gitdir:/opt/repos/"]
-	path = ~/.config/git/config.work
+[include]
+     path = ~/.config/git/conf.d/config.credentials
