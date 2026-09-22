@@ -60,7 +60,7 @@ export REDISCLI_HISTFILE="$XDG_DATA_HOME"/redis/rediscli_history
 # ---------------------------------------------
 export ANSIBLE_HOME="$XDG_DATA_HOME"/ansible
 export ANSIBLE_COLOR_DOC_CONSTANT="bright green"
-export DOCKER_CONFIG="$XDG_CONFIG_HOME"/docker
+# export DOCKER_CONFIG="$XDG_CONFIG_HOME"/docker
 
 # kubernetes
 export KREW_ROOT="$XDG_DATA_HOME"/krew
