@@ -15,6 +15,9 @@ binaries_opt: /opt/tools    # tools that need their own tree live here
 #              raw      the asset is the binary
 #              tree     unpack into binaries_opt and symlink the binaries,
 #                       for tools that need the files shipped next to them
+#   bindir     tree only, and required there: the path to the binaries
+#              inside the archive. Nothing is stripped on the way in, so
+#              it starts at whatever top directory the asset unpacks to
 # ---------------------------------------------
 binaries:
   # shell, search & files
@@ -87,7 +90,16 @@ binaries:
     command: nvim
     version: "0.12.4"
     kind: tree
+    bindir: "nvim-linux-{{ binaries_arch.linux }}/bin"
     url: "https://github.com/neovim/neovim/releases/download/v{version}/nvim-linux-{{ binaries_arch.linux }}.tar.gz"
+
+  - name: aws-cli
+    command: aws
+    version: "2.36.50"
+    kind: tree
+    bins: [aws, aws_completer]
+    bindir: aws/dist
+    url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ binaries_arch.uname }}-{version}.zip"
 
 # Entries to skip by name, e.g. on a box that has no business running yazi.
 # ---------------------------------------------

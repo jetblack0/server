@@ -13,13 +13,12 @@
     src: "{{ tool_url }}"
     remote_src: true
     dest: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}"
-    extra_opts: [--strip-components=1]
     owner: root
     group: root
 
 - name: "{{ tool.name }}: link the binaries into {{ binaries_prefix }}/bin"
   ansible.builtin.file:
-    src: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}/bin/{{ item }}"
+    src: "{{ binaries_opt }}/{{ tool.name }}/{{ tool.version }}/{{ tool.bindir }}/{{ item }}"
     dest: "{{ binaries_prefix }}/bin/{{ item }}"
     state: link
     force: true
