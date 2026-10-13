@@ -10,15 +10,13 @@ dotfiles_login_shell: false
 # relative to the playbook so that push, local and pull runs all find it.
 dotfiles_shared: "{{ playbook_dir | dirname }}/shared"
 
-# Directories under shared/config, each installed into ~/.config as one unit.
-# ---------------------------------------------
-dotfiles_config_dirs:
-  - bat
-  - git
-  - nvim
-  - shell
-  - tmux
-  - yazi
+# Every directory under shared/config is installed into ~/.config as one
+# unit, except the ones masked for this distro. The key is the distribution
+# name and its major version, the same names the lab uses.
+dotfiles_mask:
+  # tmux 1.8 is too old to load the config.
+  amazon2:
+    - tmux
 
 # Files under shared/home, relative to the user's home.
 dotfiles_home_files:

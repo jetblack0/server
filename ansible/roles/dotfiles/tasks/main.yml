@@ -29,6 +29,26 @@
   ansible.builtin.set_fact:
     dotfiles_zsh: "{{ (dotfiles_zsh_probe.stdout | trim) or '/usr/bin/zsh' }}"
 
+- name: List the config directories the repo ships
+  ansible.builtin.find:
+    paths: "{{ dotfiles_shared }}/config"
+    file_type: directory
+    recurse: false
+  # Find them on the machine where Ansible itself is running.
+  delegate_to: localhost
+  become: false
+  register: dotfiles_found
+
+- name: Leave out the directories masked for this distro
+  ansible.builtin.set_fact:
+    dotfiles_config_dirs: >-
+      {{ dotfiles_found.files | map(attribute='path') | map('basename')
+         | difference(dotfiles_mask[dotfiles_distro] | default([]))
+         | sort }}
+  vars:
+    dotfiles_distro: >-
+      {{ ansible_facts['distribution'] | lower }}{{ ansible_facts['distribution_major_version'] }}
+
 - name: Install the dotfiles for each user
   ansible.builtin.include_tasks: user.yml
   loop: "{{ dotfiles_users }}"
