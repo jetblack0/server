@@ -5,19 +5,12 @@
 	name = Henry Chi
 	email = me@unazoomer.com
 
-; [interactive]
-;     side-by-side = true
-;     line-numbers = true
-
-[merge]
-	tool = codediff
-
-[mergetool "codediff"]
-	cmd = nvim \"$MERGED\" -c \"CodeDiff merge \\\"$MERGED\\\"\"
-
 [credential]
 	helper = 
 	helper = store --file ~/.config/git/conf.d/credentials
 
 [include]
      path = ~/.config/git/conf.d/config.credentials
+
+[includeIf "gitdir:~/Development/work/"]
+	path = ~/.config/git/conf.d/config.work
