@@ -19,7 +19,7 @@
       loop_control:
         loop_var: dotfiles_dir
       vars:
-        dotfiles_repo_dir: "{{ role_path }}/files/config/{{ dotfiles_dir }}"
+        dotfiles_repo_dir: "{{ dotfiles_shared }}/config/{{ dotfiles_dir }}"
         dotfiles_dest_dir: "{{ dotfiles_home }}/.config/{{ dotfiles_dir }}"
 
     - name: "{{ dotfiles_user }}: drop this run's backup folder if it stayed empty"
@@ -29,20 +29,9 @@
       failed_when: false
       changed_when: false
 
-    - name: "{{ dotfiles_user }}: render the templated configs"
-      ansible.builtin.template:
-        src: "{{ item.src }}"
-        dest: "{{ dotfiles_home }}/{{ item.dest }}"
-        owner: "{{ dotfiles_user }}"
-        group: "{{ dotfiles_gid }}"
-        mode: "0644"
-      loop: "{{ dotfiles_templates }}"
-      loop_control:
-        label: "{{ item.dest }}"
-
     - name: "{{ dotfiles_user }}: install the files that belong in $HOME"
       ansible.builtin.copy:
-        src: "{{ item.src }}"
+        src: "{{ dotfiles_shared }}/home/{{ item.src }}"
         dest: "{{ dotfiles_home }}/{{ item.dest }}"
         owner: "{{ dotfiles_user }}"
         group: "{{ dotfiles_gid }}"

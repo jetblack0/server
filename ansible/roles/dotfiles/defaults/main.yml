@@ -6,7 +6,11 @@ dotfiles_users: ["{{ ansible_facts['user_id'] }}"]
 # Make zsh the login shell of every user above.
 dotfiles_login_shell: false
 
-# Directories under files/config, each installed into ~/.config as one unit.
+# The configs, shared with every other framework in the repo. Resolved
+# relative to the playbook so that push, local and pull runs all find it.
+dotfiles_shared: "{{ playbook_dir | dirname }}/shared"
+
+# Directories under shared/config, each installed into ~/.config as one unit.
 # ---------------------------------------------
 dotfiles_config_dirs:
   - bat
@@ -16,13 +20,9 @@ dotfiles_config_dirs:
   - tmux
   - yazi
 
-dotfiles_templates:
-  - { src: config/shell/zsh/p10k.zsh.j2, dest: .config/shell/zsh/.p10k.zsh }
-  - { src: config/tmux/tmux.conf.j2, dest: .config/tmux/tmux.conf }
-  - { src: config/yazi/init.lua.j2, dest: .config/yazi/init.lua }
-
+# Files under shared/home, relative to the user's home.
 dotfiles_home_files:
-  - { src: home/zshenv, dest: .zshenv }
+  - { src: zshenv, dest: .zshenv }
 
 dotfiles_state_dirs:
   - .cache/less

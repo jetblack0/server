@@ -21,6 +21,30 @@ export ZSH_COMPDUMP="$XDG_CACHE_HOME"/zsh/.zcompdump-${(%):-%m}-${ZSH_VERSION}
 export INPUTRC="$XDG_CONFIG_HOME"/shell/inputrc
 
 
+# Prompt icon
+# ---------------------------------------------
+# This distro's nerd font glyph, picked by the ID in /etc/os-release. The p10k
+# prompt character, tmux's copy-mode prompt search and yazi's header all read
+# it from here. Assigned in two steps because zsh 5.0 (Amazon Linux 2) cannot
+# initialise an associative array inside typeset.
+typeset -A _prompt_icons
+_prompt_icons=(
+  amzn       ''
+  ubuntu     ''
+  debian     ''
+  fedora     ''
+  rhel       ''
+  centos     ''
+  rocky      ''
+  almalinux  ''
+  alpine     ''
+  arch       ''
+)
+[[ -r /etc/os-release ]] && _os_id=${${(M)${(f)"$(</etc/os-release)"}:#ID=*}#ID=}
+export PROMPT_ICON="${_prompt_icons[${(Q)_os_id}]:-}"
+unset _prompt_icons _os_id
+
+
 # Default programs
 # ---------------------------------------------
 export EDITOR="nvim"

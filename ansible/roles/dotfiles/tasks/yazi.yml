@@ -2,7 +2,7 @@
 - name: "{{ dotfiles_user }}: work out which yazi plugins should be installed"
   ansible.builtin.set_fact:
     dotfiles_yazi_plugins: >-
-      {{ lookup('ansible.builtin.file', role_path ~ '/files/config/yazi/package.toml')
+      {{ lookup('ansible.builtin.file', dotfiles_shared ~ '/config/yazi/package.toml')
          | regex_findall('use\s*=\s*"([^"]+)"')
          | map('regex_replace', '^.*[:/]', '')
          | map('regex_replace', '$', '.yazi')

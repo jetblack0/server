@@ -1,7 +1,3 @@
-{#
-  The header glyph is this distro's nerd font icon, the same one the zsh
-  prompt and tmux's copy-mode search use (see vars/main.yml).
--#}
 -- Plugins
 -- ---------------------------------------------
 -- Bundled with yazi: remembers yanked files across instances.
@@ -22,7 +18,9 @@ require("full-border"):setup()
 
 -- Header
 -- ---------------------------------------------
+-- This distro's nerd font glyph, the same one the zsh prompt draws. .zshenv
+-- exports it.
 Header:children_add(function()
-	return ui.Span("{{ dotfiles_prompt_icon }}  "):fg("gray"):bold(true)
+	return ui.Span((os.getenv("PROMPT_ICON") or "") .. "  "):fg("gray"):bold(true)
 end, 500, Header.LEFT)
 -- ---------------------------------------------
