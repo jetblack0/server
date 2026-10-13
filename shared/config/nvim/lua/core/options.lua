@@ -27,8 +27,6 @@ local options = {
 	-- Disable mouse
 	mouse = "",
 	-- ttymouse = "",
-	-- Use system clipboard
-	clipboard = "unnamedplus",
 	
 	-- System: Others
 	-- ---------------------------------------------
@@ -107,3 +105,25 @@ end
 -- Hide dotfiles in netrw by default, can be toggled through the gh key. 
 vim.cmd[[let ghregex='\(^\|\s\s\)\zs\.\S\+']]
 vim.cmd[[let g:netrw_list_hide=ghregex]]
+
+
+-- Clipboard
+-- ---------------------------------------------
+-- tmux before 3.4 can crash its whole server when nvim copies through it, so
+-- inside an old tmux nvim does not use the system clipboard at all. tmux puts
+-- its version in TERM_PROGRAM_VERSION in every pane. Before 3.2 it does not,
+-- and a missing version counts as old.
+local function old_tmux()
+	if not vim.env.TMUX then
+		return false
+	end
+	local version = vim.env.TERM_PROGRAM == "tmux" and vim.env.TERM_PROGRAM_VERSION or ""
+	local major, minor = version:match("(%d+)%.(%d+)")
+	return major == nil or tonumber(major) * 100 + tonumber(minor) < 304
+end
+
+if old_tmux() then
+	vim.g.loaded_clipboard_provider = 1
+else
+	vim.opt.clipboard = "unnamedplus"
+end
