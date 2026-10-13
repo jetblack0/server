@@ -1,6 +1,6 @@
-# push    ansible-playbook -i inventory personal-tools.yml -l my-box
-# local   ansible-playbook -i localhost, -c local personal-tools.yml
-# pull    ansible-pull -U <repo> -i localhost, ansible/personal-tools.yml
+# push    ansible-playbook -i inventory dotfiles.yml -l my-box
+# local   ansible-playbook -i localhost, -c local dotfiles.yml
+# pull    ansible-pull -U <repo> -i localhost, ansible/dotfiles.yml
 
 ---
 - name: Install personal CLI tooling and shell setup
