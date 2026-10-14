@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+#
+# Throwaway containers for testing changes to this repo. Each container is a
+# named instance, like debian12-1, and one distro can have several.
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$HERE/.." && pwd)"
+DEST=/home/dev/server # where the repo goes inside the container
+
+usage() {
+    cat <<EOF
+usage: ${0##*/} <command> [args]
+
+commands:
+  new <distro>     create a new instance, named <distro>-<number>, copy the
+                   repo in at ~/server, and open a shell inside
+  start <name>     start a stopped instance and open a shell inside
+  shell <name>     open another shell in a running instance
+  stop <name>      stop an instance, keeping what is inside it
+  rm <name>        remove an instance
+  list             show the instances and whether they are running
+  build <distro>   (re)build the image for a distro
+
+distros:
+$(ls "$HERE/distros" | sed 's/^/  /')
+EOF
+}
+
+die() { echo "${0##*/}: $*" >&2; exit 1; }
+
+
+# Instances
+# ---------------------------------------------
+# Every instance carries this label, set to its distro. That is how the
+# script tells its own containers apart from everything else in docker.
+LABEL=server-lab.distro
+
+# Sets the image name for distro $1.
+load_distro() {
+    distro="${1:-}"
+    [ -n "$distro" ] || die "missing distro (try: ${0##*/} help)"
+    [ -d "$HERE/distros/$distro" ] || die "unknown distro '$distro' (try: ${0##*/} help)"
+    img="server-lab/$distro"
+}
+
+# Sets everything the other commands need to work with instance $1.
+load_instance() {
+    name="${1:-}"
+    [ -n "$name" ] || die "missing instance name (try: ${0##*/} list)"
+    ctr="server-lab-$name"
+    distro="$(docker inspect -f "{{index .Config.Labels \"$LABEL\"}}" "$ctr" 2>/dev/null)" ||
+        die "no instance '$name' (try: ${0##*/} list)"
+    [ -n "$distro" ] || die "'$ctr' was not made by this script"
+}
+
+# The first free number for a new instance of $distro.
+next_name() {
+    local n=1
+    while docker inspect "server-lab-$distro-$n" >/dev/null 2>&1; do
+        n=$((n + 1))
+    done
+    echo "$distro-$n"
+}
+
+hint() {
+    case "$distro" in
+        *)
+            echo "To test a playbook:"
+            echo "    cd ansible && ansible-playbook -i localhost, -c local <playbook>.yml"
+            ;;
+    esac
+}
+
+running() {
+    [ "$(docker inspect -f '{{.State.Running}}' "$ctr" 2>/dev/null)" = true ]
+}
+
+need_running() { running || die "'$name' is not running -- run: ${0##*/} start $name"; }
+
+# Copy the files a fresh clone would have, plus new files that are not
+# committed yet. Ignored files are left out.
+copy_repo() {
+    # macOS tar adds Apple metadata that Linux tar cannot extract.
+    local tarflags=(--no-xattrs)
+    tar --version | grep -q bsdtar && tarflags+=(--no-mac-metadata)
+
+    docker exec "$ctr" mkdir -p "$DEST"
+    git -C "$REPO" ls-files -z --cached --others --exclude-standard |
+        while IFS= read -r -d '' f; do
+            # Skip files that were deleted but are still in the index.
+            if [ -e "$REPO/$f" ] || [ -h "$REPO/$f" ]; then
+                printf '%s\0' "$f"
+            fi
+        done |
+        tar -C "$REPO" "${tarflags[@]}" --null -T - -cf - |
+        docker cp - "$ctr:$DEST"
+
+    # docker cp keeps the owner from the host, so hand the files to dev.
+    docker exec -u root "$ctr" chown -R dev:dev "$DEST"
+}
+
+
+# Commands
+# ---------------------------------------------
+cmd_build() {
+    docker build -t "$img" "$HERE/distros/$distro"
+}
+
+cmd_new() {
+    docker image inspect "$img" >/dev/null 2>&1 || cmd_build
+    name="$(next_name)"
+    ctr="server-lab-$name"
+    docker run -d --name "$ctr" --hostname "$name" --label "$LABEL=$distro" "$img" >/dev/null
+    copy_repo
+    echo "new instance '$name', the repo is at ~/server."
+    hint
+    cmd_shell
+}
+
+cmd_start() {
+    running && die "'$name' is already running -- run: ${0##*/} shell $name"
+    docker start "$ctr" >/dev/null
+    cmd_shell
+}
+
+cmd_shell() {
+    need_running
+    # Ansible refuses to run without a UTF-8 locale, and the images do not
+    # set one. It is passed here rather than baked into the image, so the
+    # playbook still has to cope with a box that has no locale of its own.
+    docker exec -it \
+        -e TERM="${TERM:-xterm-256color}" \
+        -e COLORTERM="${COLORTERM:-truecolor}" \
+        -e LANG=C.UTF-8 \
+        -w "$DEST" "$ctr" bash
+}
+
+cmd_stop() {
+    running || die "'$name' is not running"
+    # The container only runs sleep, which ignores the polite signal, so
+    # there is no point waiting the usual 10 seconds.
+    docker stop -t 0 "$ctr" >/dev/null
+    echo "stopped $name"
+}
+
+cmd_rm() {
+    docker rm -f "$ctr" >/dev/null
+    echo "removed $name"
+}
+
+cmd_list() {
+    local ctr distro status
+    printf '%-20s %-15s %s\n' NAME DISTRO STATUS
+    docker ps -a --filter "label=$LABEL" \
+        --format "{{.Names}}\t{{.Label \"$LABEL\"}}\t{{.Status}}" |
+        sort |
+        while IFS=$'\t' read -r ctr distro status; do
+            printf '%-20s %-15s %s\n' "${ctr#server-lab-}" "$distro" "$status"
+        done
+}
+
+
+# Main
+# ---------------------------------------------
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+
+case "$cmd" in
+    ''|help|-h|--help) usage ;;
+    new)   load_distro "${1:-}"; cmd_new ;;
+    start) load_instance "${1:-}"; cmd_start ;;
+    shell) load_instance "${1:-}"; cmd_shell ;;
+    stop)  load_instance "${1:-}"; cmd_stop ;;
+    rm)    load_instance "${1:-}"; cmd_rm ;;
+    list)  cmd_list ;;
+    build) load_distro "${1:-}"; cmd_build ;;
+    *) die "unknown command '$cmd' (try: ${0##*/} help)" ;;
+esac
