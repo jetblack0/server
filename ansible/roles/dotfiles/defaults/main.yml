@@ -13,10 +13,7 @@ dotfiles_shared: "{{ playbook_dir | dirname }}/shared"
 # Every directory under shared/config is installed into ~/.config as one
 # unit, except the ones masked for this distro. The key is the distribution
 # name and its major version, the same names the lab uses.
-dotfiles_mask:
-  # tmux 1.8 is too old to load the config.
-  amazon2:
-    - tmux
+dotfiles_mask: {}
 
 # Files under shared/home, relative to the user's home.
 dotfiles_home_files:
