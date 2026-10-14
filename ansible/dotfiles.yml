@@ -1,4 +1,4 @@
-# push    ansible-playbook -i inventory dotfiles.yml -l my-box
+# push    ansible-playbook -i inventory/lab dotfiles.yml -l <host>
 # local   ansible-playbook -i localhost, -c local dotfiles.yml
 # pull    ansible-pull -U <repo> -i localhost, ansible/dotfiles.yml
 

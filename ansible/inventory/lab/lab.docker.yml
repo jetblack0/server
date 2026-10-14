@@ -1,0 +1,13 @@
+---
+# The lab containers, found through docker. Every instance lab/container
+# creates is labelled with its distro, so each one shows up here on its own,
+# and in a group named after its distro.
+plugin: community.docker.docker_containers
+filters:
+  - include: >-
+      "server-lab.distro" in docker_config.Labels
+  - exclude: true
+keyed_groups:
+  - key: docker_config.Labels["server-lab.distro"]
+    prefix: ""
+    separator: ""
