@@ -25,7 +25,6 @@ packages:
   - { name: rsync }
 
   # system & network
-  - { name: htop }
   - { name: procps-ng, apt: procps }
   - { name: iproute, apt: iproute2 }
 
