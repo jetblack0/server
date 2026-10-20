@@ -9,6 +9,7 @@ binaries_opt: /opt/tools    # tools that need their own tree live here
 #   command    what it is called on PATH
 #   version    pinned; also how the role decides an install is needed --
 #              `<command> --version` has to mention it
+#   version_args  what to run instead of --version, for tools without it
 #   bins       every binary to install, when there is more than just command
 #   url        rendered url to the release
 #   kind       archive  unpack, then pick the binaries out of the tree
@@ -100,6 +101,12 @@ binaries:
     bins: [aws, aws_completer]
     bindir: aws/dist
     url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ binaries_arch.uname }}-{version}.zip"
+
+  # kubernetes
+  - name: cmctl
+    version: "2.6.1"
+    version_args: version --client
+    url: "https://github.com/cert-manager/cmctl/releases/download/v{version}/cmctl_linux_{{ binaries_arch.goarch }}.tar.gz"
 
 # Entries to skip by name, e.g. on a box that has no business running yazi.
 # ---------------------------------------------
