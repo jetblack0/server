@@ -6,6 +6,13 @@
       Add its spellings to binaries_arch_spellings in vars/main.yml.
   when: ansible_facts['architecture'] not in binaries_arch_spellings
 
+- name: Fail on a group that does not exist
+  ansible.builtin.fail:
+    msg: >-
+      No binary group named {{ binaries_groups_unknown | join(', ') }}.
+      The groups are {{ binaries_groups | list | join(', ') }}.
+  when: binaries_groups_unknown | length > 0
+
 - name: Probe the installed versions
   ansible.builtin.command: "{{ binaries_prefix }}/bin/{{ item.command | default(item.name) }} {{ item.version_args | default('--version') }}"
   loop: "{{ binaries_enabled }}"

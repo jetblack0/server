@@ -102,11 +102,44 @@ binaries:
     bindir: aws/dist
     url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ binaries_arch.uname }}-{version}.zip"
 
-  # kubernetes
-  - name: cmctl
-    version: "2.6.1"
-    version_args: version --client
-    url: "https://github.com/cert-manager/cmctl/releases/download/v{version}/cmctl_linux_{{ binaries_arch.goarch }}.tar.gz"
+# Extra sets of tools, written like the entries above. A group is installed
+# only when its name is in binaries_groups_enabled.
+# ---------------------------------------------
+binaries_groups:
+  kubernetes:
+    - name: kubectl
+      version: "1.37.1"
+      version_args: version --client
+      kind: raw
+      url: "https://dl.k8s.io/release/v{version}/bin/linux/{{ binaries_arch.goarch }}/kubectl"
+
+    - name: cmctl
+      version: "2.6.1"
+      version_args: version --client
+      url: "https://github.com/cert-manager/cmctl/releases/download/v{version}/cmctl_linux_{{ binaries_arch.goarch }}.tar.gz"
+
+    - name: helm
+      version: "4.3.1"
+      version_args: version --short
+      url: "https://get.helm.sh/helm-v{version}-linux-{{ binaries_arch.goarch }}.tar.gz"
+
+    - name: argocd
+      version: "3.5.6"
+      version_args: version --client
+      kind: raw
+      url: "https://github.com/argoproj/argo-cd/releases/download/v{version}/argocd-linux-{{ binaries_arch.goarch }}"
+
+    # sops checks online for a newer release unless told not to.
+    - name: sops
+      version: "3.13.3"
+      version_args: --version --disable-version-check
+      kind: raw
+      url: "https://github.com/getsops/sops/releases/download/v{version}/sops-v{version}.linux.{{ binaries_arch.goarch }}"
+
+# The groups this machine gets, e.g. in /etc/ansible/pull-vars.yml:
+#   binaries_groups_enabled: [kubernetes]
+# ---------------------------------------------
+binaries_groups_enabled: []
 
 # Entries to skip by name, e.g. on a box that has no business running yazi.
 # ---------------------------------------------

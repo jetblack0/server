@@ -5,4 +5,8 @@ binaries_arch_spellings:
 
 binaries_arch: "{{ binaries_arch_spellings[ansible_facts['architecture']] | default({}) }}"
 
-binaries_enabled: "{{ binaries | rejectattr('name', 'in', binaries_exclude) | list }}"
+binaries_groups_unknown: "{{ binaries_groups_enabled | difference(binaries_groups | list) }}"
+
+binaries_enabled: >-
+  {{ (binaries + binaries_groups_enabled | map('extract', binaries_groups) | flatten)
+     | rejectattr('name', 'in', binaries_exclude) | list }}
