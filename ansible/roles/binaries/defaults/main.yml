@@ -78,6 +78,12 @@ binaries:
     bins: [uv, uvx]
     url: "https://github.com/astral-sh/uv/releases/download/{version}/uv-{{ binaries_arch.uname }}-unknown-linux-musl.tar.gz"
 
+  # yaml. The distro yq packages are a different tool with a different syntax.
+  - name: yq
+    version: "4.54.1"
+    kind: raw
+    url: "https://github.com/mikefarah/yq/releases/download/v{version}/yq_linux_{{ binaries_arch.goarch }}"
+
   # encryption
   - name: age
     version: "1.3.2"
