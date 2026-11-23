@@ -6,9 +6,9 @@ dotfiles_users: ["{{ ansible_facts['user_id'] }}"]
 # Make zsh the login shell of every user above.
 dotfiles_login_shell: false
 
-# The configs, shared with every other framework in the repo. Resolved
-# relative to the playbook so that push, local and pull runs all find it.
-dotfiles_shared: "{{ playbook_dir | dirname }}/shared"
+# The configs, shared with every other framework in the repo (the repo root's
+# shared/ links here).
+dotfiles_shared: "{{ (role_path ~ '/../../shared') | realpath }}"
 
 # Every directory under shared/config is installed into ~/.config as one
 # unit, except the ones masked for this distro. The key is the distribution
