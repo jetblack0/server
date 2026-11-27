@@ -1,0 +1,149 @@
+---
+# The contract first, as in the alloy role: fail fast and specifically,
+# because under ansible-pull nobody is watching the run.
+
+- name: Fail on an egress setting that is neither auto nor a list
+  ansible.builtin.fail:
+    msg: >-
+      squid_egress_addresses is {{ squid_egress_addresses }}. It takes
+      'auto', a list of addresses, or [] -- see roles/squid/defaults/main.yml.
+  when: >-
+    squid_egress_addresses != 'auto'
+    and (squid_egress_addresses is string
+         or squid_egress_addresses is mapping
+         or squid_egress_addresses is not iterable)
+
+# squid binds the address on every request that came in on it, so one the
+# box does not hold would fail those requests and nothing else.
+- name: Fail on an egress address the box does not hold
+  ansible.builtin.fail:
+    msg: >-
+      {{ squid_egress_resolved | difference(ansible_facts['all_ipv4_addresses']) }}
+      is not configured on this box, which holds
+      {{ ansible_facts['all_ipv4_addresses'] }}.
+  when: >-
+    squid_egress_resolved
+    | difference(ansible_facts['all_ipv4_addresses']) | length > 0
+
+- name: Check for the docker daemon's socket
+  ansible.builtin.stat:
+    path: /var/run/docker.sock
+  register: squid_docker_sock
+
+- name: Probe the compose plugin
+  ansible.builtin.command: docker compose version --short
+  register: squid_compose_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Fail without docker and its compose plugin
+  ansible.builtin.fail:
+    msg: >-
+      squid runs as a compose stack, and this role does not install docker:
+      /var/run/docker.sock
+      {{ 'exists' if squid_docker_sock.stat.exists else 'does not exist' }}
+      and `docker compose version` returned {{ squid_compose_probe.rc }}.
+      Install and start docker and its compose plugin first.
+  when: not squid_docker_sock.stat.exists or squid_compose_probe.rc != 0
+
+- name: Check for the cron drop-in directory
+  ansible.builtin.stat:
+    path: /etc/cron.d
+  register: squid_cron_dir
+
+- name: Fail without cron
+  ansible.builtin.fail:
+    msg: >-
+      /etc/cron.d does not exist. squid's logs are truncated by a daily cron
+      job, and without one they grow until the disk is full. Install cron
+      first (cronie on dnf boxes, cron on apt ones).
+  when: not squid_cron_dir.stat.exists
+
+- name: Ensure the squid directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ squid_dir }}"
+    - "{{ squid_dir }}/conf"
+
+# The config is checked with the image's own squid before it is put in
+# place, which needs the image on the box first.
+- name: Check whether the pinned image is present
+  ansible.builtin.command: "docker image inspect {{ squid_image }}"
+  register: squid_image_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Pull the pinned image
+  ansible.builtin.command: "docker pull --quiet {{ squid_image }}"
+  when: squid_image_probe.rc != 0
+  changed_when: true
+
+- name: Render the squid configuration
+  ansible.builtin.template:
+    src: squid.conf.j2
+    dest: "{{ squid_dir }}/conf/squid.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    # parse reads the file with the squid that will run it, so a config it
+    # rejects fails the task instead of replacing the one in use
+    validate: >-
+      docker run --rm --network none --entrypoint squid
+      -v %s:/tmp/squid.conf:ro {{ squid_image }} -k parse -f /tmp/squid.conf
+  notify: reconfigure squid
+
+- name: Render the compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ squid_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+    # never replace a working compose file with one compose cannot parse
+    validate: docker compose -f %s config --quiet
+
+# squid writes its logs to files inside the container and never rotates
+# them (logfile_rotate 0); the entrypoint tails them to stdout, where
+# docker's own rotation applies. The files themselves are emptied here.
+- name: Truncate the log files daily
+  ansible.builtin.copy:
+    dest: /etc/cron.d/squid-truncate-logs
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Rendered by ansible (role squid).
+      0 4 * * * root docker exec squid bash -c ': > /var/log/squid/access.log; : > /var/log/squid/cache.log' >/dev/null 2>&1
+
+# up creates the container, starts a stopped one, and recreates it when the
+# compose file changed. A container that is already as described is left
+# alone, and compose then reports it as Running.
+- name: Start squid
+  ansible.builtin.command:
+    cmd: docker compose up --detach --quiet-pull
+    chdir: "{{ squid_dir }}"
+  register: squid_up
+  changed_when: squid_up.stderr is search('Created|Recreated|Started')
+
+- name: Apply a pending reconfigure before probing
+  ansible.builtin.meta: flush_handlers
+
+# The real verification: squid answers its own status page on the port it
+# was told to listen on. A config that parses but cannot bind the port, or
+# a container that exits on start, is caught here while ansible still has
+# the floor.
+- name: Wait for squid to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ squid_port }}/squid-internal-mgr/info"
+    status_code: 200
+  register: squid_ready
+  until: squid_ready.status == 200
+  retries: 12
+  delay: 5

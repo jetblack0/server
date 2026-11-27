@@ -1,0 +1,23 @@
+# push    ansible-playbook -i inventory squid.yml -l my-box
+# local   ansible-playbook -i localhost, -c local squid.yml
+# pull    ansible-pull -U <repo> -i localhost, ansible/squid.yml
+#
+# Docker, its compose plugin and cron must already be on the box; the play
+# fails early if they are not. It runs without a variables file: squid then
+# listens on 3128 and sends each request out through the address its client
+# connected to. To change either, pass one (-e @my-box.yml):
+#
+#   squid_port: 10086
+#   squid_egress_addresses: []
+#
+# The full contract is documented in roles/squid/defaults/main.yml.
+
+---
+- name: Run a squid forward proxy
+  hosts: all
+
+  become: true
+  gather_facts: true
+
+  roles:
+    - { role: squid, tags: squid }

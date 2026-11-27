@@ -12,11 +12,11 @@
 ---
 namespace: jetblack0
 name: server
-version: 1.1.0
+version: 1.2.0
 readme: README.md
 authors:
   - Kaicheng Qi
-description: Roles that set up a standalone server (telemetry, dotfiles, tools).
+description: Roles that set up a standalone server (telemetry, proxy, dotfiles, tools).
 license:
   - MIT
 repository: https://github.com/jetblack0/server

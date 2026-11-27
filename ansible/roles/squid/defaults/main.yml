@@ -1,0 +1,30 @@
+---
+# A forward proxy: squid in a container, on the host's own network. The role
+# does not install docker; the box must already have the daemon and the
+# compose plugin, and the play fails early if it does not.
+
+# The port squid listens on, on every address the box holds. Who may reach
+# it is the firewall's job: squid itself allows every client.
+# ---------------------------------------------
+squid_port: 3128
+
+# Which address a request leaves from.
+#   auto    every IPv4 address on the interface the default route uses: a
+#           request leaves from the address its client connected to. On a
+#           box with one address that changes nothing. On a box that holds
+#           several, each with its own public address behind it, every
+#           address becomes a proxy URL with its own outbound IP.
+#   [...]   the same mapping, for exactly these addresses. Each one must be
+#           configured on the box.
+#   []      no mapping: everything leaves from the primary address.
+#
+# auto reads the addresses when the play runs, so after adding an address
+# to the box, run the play again -- squid picks it up with a reconfigure,
+# and connections already open are left alone.
+# ---------------------------------------------
+squid_egress_addresses: auto
+
+squid_image: docker.io/ubuntu/squid:5.2-22.04_beta
+
+# Holds the compose file and, under conf/, squid.conf.
+squid_dir: /opt/squid

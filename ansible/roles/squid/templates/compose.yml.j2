@@ -1,0 +1,22 @@
+# Rendered by ansible (role squid). Change the role's variables and run the
+# play again; an edit made here is overwritten.
+services:
+  squid:
+    image: {{ squid_image }}
+    container_name: squid
+    restart: unless-stopped
+    # Host networking instead of a published port: squid has to see which of
+    # the box's own addresses a client connected to, and bind that same
+    # address on the way out (tcp_outgoing_address in squid.conf). Behind
+    # the docker bridge it sees neither, and every request leaves from the
+    # primary address whatever the client dialled.
+    network_mode: host
+    # The image's own command, pointed at the mounted config.
+    command: ["-f", "{{ squid_conf_mount }}/squid.conf", "-NYC"]
+    volumes:
+      - ./conf:{{ squid_conf_mount }}:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"

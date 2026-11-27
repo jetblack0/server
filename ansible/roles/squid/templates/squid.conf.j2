@@ -1,0 +1,59 @@
+# Rendered by ansible (role squid). Change the role's variables and run the
+# play again; an edit made here is overwritten.
+
+logfile_rotate 0
+
+# One JSON object per request. %# URL-quotes the fields a client controls,
+# so nothing it sends can break the JSON. proxy_ip is the address of this box
+# the client connected to, egress_ip the one the request left from: with the
+# mapping below they are the same, and a line where they differ is a request
+# that did not leave the way its client asked. egress_ip is "-" when squid
+# never opened a connection (a denied request, a DNS failure).
+logformat json {"ts":%ts.%03tu,"client_ip":"%>a","proxy_ip":"%la","egress_ip":"%<la","method":"%rm","url":"%#ru","http_status":%>Hs,"bytes":%<st,"duration_ms":%tr,"squid_code":"%Ss","hierarchy":"%Sh","server_ip":"%<a","mime":"%#mt"}
+# Files, not stdout: squid cannot write /dev/stdout itself. The image's
+# entrypoint tails these onto the container's stdout.
+access_log stdio:/var/log/squid/access.log json
+cache_log /var/log/squid/cache.log
+
+# Standard ports
+acl SSL_ports port 443
+acl Safe_ports port 80          # http
+acl Safe_ports port 21          # ftp
+acl Safe_ports port 443         # https
+acl Safe_ports port 70          # gopher
+acl Safe_ports port 210         # wais
+acl Safe_ports port 1025-65535  # unregistered ports
+acl Safe_ports port 280         # http-mgmt
+acl Safe_ports port 488         # gss-http
+acl Safe_ports port 591         # filemaker
+acl Safe_ports port 777         # multiling http
+
+cache deny all
+# Host networking (see docker-compose.yml): this is the host's own port,
+# open on every address the box holds.
+http_port {{ squid_port }}
+
+# One egress address per listening address: a request leaves from the
+# address the client connected to. Where each address has its own public
+# address behind it, the proxy URL a client picks decides the public IP the
+# upstream sees. A connection to an address not listed here leaves from the
+# primary one.
+{% for ip in squid_egress_resolved %}
+acl via_{{ ip | replace('.', '_') }} localip {{ ip }}
+tcp_outgoing_address {{ ip }} via_{{ ip | replace('.', '_') }}
+{% endfor %}
+
+# Access rules
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access allow localhost manager
+http_access deny manager
+http_access deny to_localhost
+# Allow all clients
+http_access allow all
+
+coredump_dir /var/spool/squid
+refresh_pattern ^ftp:           1440    20%     10080
+refresh_pattern ^gopher:        1440    0%      1440
+refresh_pattern -i (/cgi-bin/|\?) 0     0%      0
+refresh_pattern .               0       20%     4320

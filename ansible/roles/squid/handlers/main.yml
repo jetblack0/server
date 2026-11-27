@@ -1,0 +1,20 @@
+---
+# A reconfigure, not a restart: squid re-reads its config in place and the
+# connections already open carry on, where a restart would drop every one
+# of them. The entrypoint is a shell that does not pass signals on, so the
+# signal is sent by squid itself, from inside the container.
+- name: reconfigure squid
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - squid
+      - squid
+      - -f
+      - "{{ squid_conf_mount }}/squid.conf"
+      - -k
+      - reconfigure
+  # a container this run created or recreated has read the new config
+  # already, and is not ready to take the signal yet
+  when: squid_up is not changed
+  changed_when: true

@@ -1,0 +1,22 @@
+---
+# Where the container sees {{ squid_dir }}/conf. The whole directory is
+# mounted, not the one file: ansible replaces squid.conf by renaming a new
+# file over it, and a single-file mount would keep showing the old one, so a
+# reconfigure would re-read the config it already had.
+squid_conf_mount: /etc/squid/managed
+
+# Every IPv4 address on the interface the default route leaves through.
+# Ansible files one of them under ipv4 and the rest under ipv4_secondaries,
+# and which lands where follows the order the kernel lists them in, not
+# which one is the primary -- so take both. In facts the interface's name
+# has its dashes turned into underscores.
+squid_interface: "{{ ansible_facts['default_ipv4']['interface'] | replace('-', '_') }}"
+squid_interface_addresses: >-
+  {{ ([ansible_facts[squid_interface]['ipv4']]
+      + ansible_facts[squid_interface]['ipv4_secondaries'] | default([]))
+     | map(attribute='address') | sort }}
+
+# The addresses squid maps, whichever way they were given.
+squid_egress_resolved: >-
+  {{ squid_interface_addresses if squid_egress_addresses == 'auto'
+     else squid_egress_addresses }}
